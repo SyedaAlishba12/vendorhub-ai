@@ -1,0 +1,46 @@
+# ===== Node / Next.js =====
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+.eslintcache
+
+# ===== Python / FastAPI =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+env/
+.venv/
+.pytest_cache/
+.mypy_cache/
+
+# ===== Environment (NEVER COMMIT SECRETS) =====
+.env
+.env.local
+.env.development
+.env.production
+*.env
+!.env.example
+
+# ===== Database =====
+*.db
+*.sqlite3
+pgdata/
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ===== Logs & Uploads =====
+logs/
+*.log
+uploads/
+temp/
+
+# ===== OS =====
+Thumbs.db
