@@ -1,4 +1,5 @@
 import os
+import ssl
 import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -13,8 +14,15 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DatabaseLogger")
 
+# SSL context required for Neon + pg8000
+ssl_context = ssl.create_default_context()
+
 try:
-    engine = create_engine(DATABASE_URL, echo=False)
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        connect_args={"ssl_context": ssl_context},
+    )
     db_host = engine.url.host
     db_name = engine.url.database
     logger.info(f"✅ Successfully Connected to PostgreSQL Host: [{db_host}] | Database: [{db_name}]")
