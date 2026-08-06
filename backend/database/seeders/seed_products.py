@@ -1,18 +1,21 @@
 import logging
+from sqlalchemy import select
 from models.product import Product
 from models.vendors import Vendor
 
 logger = logging.getLogger("Seeder")
 
 
-def seed_products(db):
-    existing = db.query(Product).count()
-    if existing > 0:
+async def seed_products(db):
+    result = await db.execute(select(Product))
+    existing = result.scalars().first()
+    if existing:
         logger.info("Products already seeded, skipping.")
         return
 
-    def vendor_id(name):
-        v = db.query(Vendor).filter(Vendor.company_name == name).first()
+    async def get_vendor_id(name):
+        result = await db.execute(select(Vendor).where(Vendor.company_name == name))
+        v = result.scalars().first()
         if not v:
             logger.error(f"❌ Vendor not found: {name}")
             return None
@@ -71,7 +74,7 @@ def seed_products(db):
 
     products = []
     for name, product_name, category, desc, pmin, pmax, moq, lead, stock in products_data:
-        vid = vendor_id(name)
+        vid = await get_vendor_id(name)
         if vid is None:
             continue
         products.append(
@@ -89,5 +92,5 @@ def seed_products(db):
         )
 
     db.add_all(products)
-    db.commit()
+    await db.commit()
     logger.info(f"✅ Seeded {len(products)} products.")

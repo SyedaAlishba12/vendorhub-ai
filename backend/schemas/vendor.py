@@ -40,6 +40,7 @@ class VendorResponse(VendorBase):
     response_time_hours: Optional[int] = None
     is_verified: bool
     created_at: datetime
+    match_score: Optional[float] = None
 
     class Config:
         from_attributes = True
