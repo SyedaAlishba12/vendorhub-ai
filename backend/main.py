@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from routes import vendor_routes, product_routes
 
 from routes.authRoutes import router as auth_router
 from routes.vendorRoutes import router as vendor_router
@@ -22,6 +24,17 @@ app.include_router(product_router)
 app.include_router(inventory_router)
 app.include_router(order_router)
 app.include_router(ai_recommendation_router)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(vendor_routes.router)
+app.include_router(product_routes.router)
 
 
 @app.get("/")

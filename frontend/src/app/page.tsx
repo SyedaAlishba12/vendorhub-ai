@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { 
   Sparkles, 
   Search, 
@@ -76,7 +77,7 @@ export default function AppLayout() {
       <div className="flex flex-1">
         
         {/* 2. LEFT SIDEBAR */}
-        <aside className="w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-4rem)] flex flex-col justify-between p-4 shrink-0 hidden lg:flex text-slate-700">
+        <aside className="w-64 bg-white border-r border-slate-200 h-[calc(100vh-4rem)] sticky top-16 flex flex-col justify-between p-4 shrink-0 hidden lg:flex text-slate-700 overflow-y-auto">
           <div className="space-y-6">
             <div>
               <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
@@ -84,22 +85,23 @@ export default function AppLayout() {
               </p>
               <nav className="space-y-1">
                 {[
-                  { label: 'Buyer Dashboard', icon: LayoutDashboard, active: true },
-                  { label: 'AI Supplier Search', icon: Search, tag: 'AI' },
-                  { label: 'Vendor Directory', icon: Store },
-                  { label: 'Product Catalog', icon: PackageCheck },
-                  { label: 'RFQs & Quotes', icon: FileText },
-                  { label: 'Order Management', icon: ShoppingBag },
-                  { label: 'AI Assistant & Chat', icon: MessageSquare },
-                  { label: 'Risk Analysis', icon: ShieldAlert, tag: 'AI' },
-                  { label: 'Smart Documents', icon: FolderArchive },
-                  { label: 'Ratings & Reviews', icon: Star },
-                  { label: 'Platform Analytics', icon: BarChart3 },
+                  { label: 'Buyer Dashboard', icon: LayoutDashboard, active: true, href: '/' },
+                  { label: 'AI Supplier Search', icon: Search, tag: 'AI', href: '#' },
+                  { label: 'Vendor Directory', icon: Store, href: '/vendors' },
+                  { label: 'Product Catalog', icon: PackageCheck, href: '/products' },
+                  { label: 'RFQs & Quotes', icon: FileText, href: '#' },
+                  { label: 'Order Management', icon: ShoppingBag, href: '#' },
+                  { label: 'AI Assistant & Chat', icon: MessageSquare, href: '#' },
+                  { label: 'Risk Analysis', icon: ShieldAlert, tag: 'AI', href: '#' },
+                  { label: 'Smart Documents', icon: FolderArchive, href: '#' },
+                  { label: 'Ratings & Reviews', icon: Star, href: '#' },
+                  { label: 'Platform Analytics', icon: BarChart3, href: '#' },
                 ].map((item, idx) => {
                   const Icon = item.icon;
                   return (
-                    <button
+                    <Link
                       key={idx}
+                      href={item.href}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                         item.active 
                           ? 'bg-indigo-50 text-indigo-600 font-bold border border-indigo-100 shadow-sm' 
@@ -115,7 +117,7 @@ export default function AppLayout() {
                           {item.tag}
                         </span>
                       )}
-                    </button>
+                    </Link>
                   );
                 })}
               </nav>
