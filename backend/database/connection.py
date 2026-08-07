@@ -1,25 +1,40 @@
 import os
 import logging
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
 from dotenv import load_dotenv
 
-# Load environment variables from .env
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Set up logger for DB connection logging
+# Switch postgresql:// to postgresql+asyncpg:// if needed
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# Clean existing sslmode from query string to let connect_args handle it cleanly
+if DATABASE_URL and "sslmode=" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.split("?sslmode=")[0].split("&sslmode=")[0]
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DatabaseLogger")
 
-try:
-    engine = create_engine(DATABASE_URL, echo=False)
-    db_host = engine.url.host
-    db_name = engine.url.database
-    logger.info(f"✅ Successfully Connected to PostgreSQL Host: [{db_host}] | Database: [{db_name}]")
-except Exception as e:
-    logger.error(f"❌ Database connection failed: {e}")
-    raise e
+# Neon requires SSL for asyncpg. Adding ssl=True directly to connect_args
+engine = create_async_engine(
+    DATABASE_URL, 
+    echo=False,
+    connect_args={"ssl": True}
+)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Async Session Factory
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
+
+Base = declarative_base()
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
