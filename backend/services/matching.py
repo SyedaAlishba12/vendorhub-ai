@@ -1,24 +1,29 @@
-def calculate_match_score(vendor) -> float:
-    # Quality/Reviews (40%)
-    rating_score = (vendor.rating / 5) * 40 if vendor.rating else 0
+def calculate_match_breakdown(vendor) -> dict:
+    rating_score = round((vendor.rating / 5) * 40, 1) if vendor.rating else 0.0
+    verified_score = 20.0 if vendor.is_verified else 0.0
+    certification_score = 20.0 if vendor.certification else 0.0
 
-    # Verification (20%)
-    verified_score = 20 if vendor.is_verified else 0
-
-    # Certification (20%)
-    certification_score = 20 if vendor.certification else 0
-
-    # Delivery Speed (20%) — faster response = higher score
     if vendor.response_time_hours is None:
-        response_score = 0
+        response_score = 0.0
     elif vendor.response_time_hours <= 4:
-        response_score = 20
+        response_score = 20.0
     elif vendor.response_time_hours <= 8:
-        response_score = 15
+        response_score = 15.0
     elif vendor.response_time_hours <= 12:
-        response_score = 10
+        response_score = 10.0
     else:
-        response_score = 5
+        response_score = 5.0
 
-    total = rating_score + verified_score + certification_score + response_score
-    return round(min(total, 100), 1)
+    total = round(min(rating_score + verified_score + certification_score + response_score, 100), 1)
+
+    return {
+        "total": total,
+        "quality_score": rating_score,
+        "verification_score": verified_score,
+        "certification_score": certification_score,
+        "delivery_speed_score": response_score,
+    }
+
+
+def calculate_match_score(vendor) -> float:
+    return calculate_match_breakdown(vendor)["total"]

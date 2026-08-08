@@ -13,8 +13,14 @@ async def get_db():
 
 
 @router.get("/", response_model=list[ProductResponse])
-async def list_products(category: str = None, min_price: float = None, max_price: float = None, db: AsyncSession = Depends(get_db)):
-    return await product_controller.get_all_products(db, category, min_price, max_price)
+async def list_products(
+    category: str = None,
+    min_price: float = None,
+    max_price: float = None,
+    max_moq: int = None,
+    db: AsyncSession = Depends(get_db),
+):
+    return await product_controller.get_all_products(db, category, min_price, max_price, max_moq)
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
@@ -44,3 +50,19 @@ async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="Product not found")
     return {"message": "Product deleted successfully"}
+
+
+@router.put("/{product_id}/moderate")
+async def moderate_product(product_id: int, is_hidden: bool, db: AsyncSession = Depends(get_db)):
+    updated = await product_controller.set_product_moderation(db, product_id, is_hidden)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Product moderation updated", "is_hidden": updated.is_hidden}
+
+
+@router.put("/{product_id}/feature")
+async def feature_product(product_id: int, is_featured: bool, db: AsyncSession = Depends(get_db)):
+    updated = await product_controller.set_product_featured(db, product_id, is_featured)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Product featured status updated", "is_featured": updated.is_featured}

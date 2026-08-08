@@ -4,6 +4,7 @@ from database.connection import AsyncSessionLocal, engine
 from models.base import Base
 from models.vendors import Vendor
 from models.product import Product
+from models.quote import Quote
 
 
 async def main():
@@ -12,10 +13,9 @@ async def main():
 
     async with AsyncSessionLocal() as db:
         try:
-            result_products = await db.execute(delete(Product))
-            result_vendors = await db.execute(delete(Vendor))
+            result_quotes = await db.execute(delete(Quote))
             await db.commit()
-            print(f"🗑️ Deleted {result_products.rowcount} products and {result_vendors.rowcount} vendors.")
+            print(f"🗑️ Deleted {result_quotes.rowcount} quotes.")
         except Exception as e:
             await db.rollback()
             print(f"❌ Error: {e}")

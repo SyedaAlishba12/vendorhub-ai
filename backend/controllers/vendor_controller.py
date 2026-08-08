@@ -2,11 +2,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.vendors import Vendor
 from schemas.vendor import VendorCreate, VendorUpdate
-from services.matching import calculate_match_score
+from services.matching import calculate_match_breakdown
 
 
 def _attach_score(vendor):
-    vendor.match_score = calculate_match_score(vendor)
+    breakdown = calculate_match_breakdown(vendor)
+    vendor.match_score = breakdown["total"]
+    vendor.match_breakdown = breakdown
     return vendor
 
 
@@ -17,9 +19,12 @@ async def get_all_vendors(
     certification: str = None,
     min_rating: float = None,
     search: str = None,
+    include_hidden: bool = False,
 ):
     query = select(Vendor)
 
+    if not include_hidden:
+        query = query.where(Vendor.is_hidden == False)  # noqa: E712
     if country:
         query = query.where(Vendor.country.ilike(f"%{country}%"))
     if industry:
@@ -71,4 +76,26 @@ async def delete_vendor(db: AsyncSession, vendor_id: int):
         return None
     await db.delete(vendor)
     await db.commit()
+    return vendor
+
+
+async def set_vendor_moderation(db: AsyncSession, vendor_id: int, is_hidden: bool):
+    result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))
+    vendor = result.scalars().first()
+    if not vendor:
+        return None
+    vendor.is_hidden = is_hidden
+    await db.commit()
+    await db.refresh(vendor)
+    return vendor
+
+
+async def set_vendor_featured(db: AsyncSession, vendor_id: int, is_featured: bool):
+    result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))
+    vendor = result.scalars().first()
+    if not vendor:
+        return None
+    vendor.is_featured = is_featured
+    await db.commit()
+    await db.refresh(vendor)
     return vendor

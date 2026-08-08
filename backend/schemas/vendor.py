@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict
 from datetime import datetime
 
 
@@ -41,6 +41,9 @@ class VendorResponse(VendorBase):
     is_verified: bool
     created_at: datetime
     match_score: Optional[float] = None
+    match_breakdown: Optional[Dict[str, float]] = None
+    is_hidden: bool = False
+    is_featured: bool = False
 
     class Config:
         from_attributes = True

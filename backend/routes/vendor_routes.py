@@ -51,3 +51,19 @@ async def delete_vendor(vendor_id: int, db: AsyncSession = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="Vendor not found")
     return {"message": "Vendor deleted successfully"}
+
+
+@router.put("/{vendor_id}/moderate")
+async def moderate_vendor(vendor_id: int, is_hidden: bool, db: AsyncSession = Depends(get_db)):
+    updated = await vendor_controller.set_vendor_moderation(db, vendor_id, is_hidden)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    return {"message": "Vendor moderation updated", "is_hidden": updated.is_hidden}
+
+
+@router.put("/{vendor_id}/feature")
+async def feature_vendor(vendor_id: int, is_featured: bool, db: AsyncSession = Depends(get_db)):
+    updated = await vendor_controller.set_vendor_featured(db, vendor_id, is_featured)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    return {"message": "Vendor featured status updated", "is_featured": updated.is_featured}
