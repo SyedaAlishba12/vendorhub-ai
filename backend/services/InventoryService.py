@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from models.Inventory import Inventory
-from models.Product import Product
+from models.product import Product
 
 
 class InventoryService:

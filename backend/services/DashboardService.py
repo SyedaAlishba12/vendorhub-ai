@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from models.Product import Product
+from models.product import Product
 from models.Order import Order
 from models.Inventory import Inventory
 

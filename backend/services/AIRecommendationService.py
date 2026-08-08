@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from models.Product import Product
+from models.product import Product
 
 
 class AIRecommendationService:

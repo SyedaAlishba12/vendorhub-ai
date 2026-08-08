@@ -1,23 +1,18 @@
 import os
 import ssl
 import logging
-<<<<<<< HEAD
 
 from dotenv import load_dotenv
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-=======
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from dotenv import load_dotenv
->>>>>>> origin/feature/vendor-product-modules
 
-from database.base import Base
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    AsyncSession,
+    async_sessionmaker,
+)
 
-from models.User import User
-from models.Vendor import Vendor
-
-
-# Load .env
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -25,50 +20,63 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DatabaseLogger")
 
-<<<<<<< HEAD
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set in the environment.")
 
-try:
-    engine = create_engine(
-        DATABASE_URL,
-        pool_pre_ping=True,
-        pool_recycle=300,
-        echo=False,
-    )
+# --------------------------------------------------
+# Async database setup
+# --------------------------------------------------
 
-=======
-# SSL context required for Neon + asyncpg
-ssl_context = ssl.create_default_context()
+# psycopg2 -> psycopg2://...
+# asyncpg  -> postgresql+asyncpg://...
 
-try:
-    engine = create_async_engine(
-        DATABASE_URL,
-        echo=False,
-        connect_args={"ssl": ssl_context},
-    )
->>>>>>> origin/feature/vendor-product-modules
-    db_host = engine.url.host
-    db_name = engine.url.database
-
-    logger.info(
-        f"✅ Successfully Connected to PostgreSQL "
-        f"Host: [{db_host}] | Database: [{db_name}]"
-    )
-
-except Exception as e:
-    logger.error(f"❌ Database connection failed: {e}")
-    raise e
-
-<<<<<<< HEAD
-
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
+ASYNC_DATABASE_URL = DATABASE_URL.replace(
+    "postgresql://",
+    "postgresql+asyncpg://",
+).replace(
+    "postgres://",
+    "postgresql+asyncpg://",
 )
 
+ssl_context = ssl.create_default_context()
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-=======
-AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
->>>>>>> origin/feature/vendor-product-modules
+engine = create_async_engine(
+    ASYNC_DATABASE_URL,
+    echo=False,
+    connect_args={"ssl": ssl_context},
+)
+
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+# --------------------------------------------------
+# Sync database setup
+# --------------------------------------------------
+
+SYNC_DATABASE_URL = DATABASE_URL.replace(
+    "postgresql+asyncpg://",
+    "postgresql+psycopg2://",
+).replace(
+    "postgresql://",
+    "postgresql+psycopg2://",
+).replace(
+    "postgres://",
+    "postgresql+psycopg2://",
+)
+
+sync_engine = create_engine(
+    SYNC_DATABASE_URL,
+    echo=False,
+    connect_args={"sslmode": "require"},
+)
+
+SessionLocal = sessionmaker(
+    bind=sync_engine,
+    autocommit=False,
+    autoflush=False,
+)
+
+logger.info("✅ Database configuration loaded successfully.")

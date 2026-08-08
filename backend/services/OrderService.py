@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from models.Order import Order
-from models.Product import Product
+from models.product import Product
 from models.Vendor import Vendor
 
 
