@@ -33,7 +33,7 @@ async def test_gemini_direct():
         print("  SDK imported OK, client created")
         
         response = await client.aio.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash",
             contents="Reply with exactly 5 words confirming you are working.",
         )
         text = (response.text or "").strip()

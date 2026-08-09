@@ -20,6 +20,8 @@ aiofiles>=23.0.0
 python-dotenv>=1.0.0
 
 # AI — Gemini SDK (used by riskController for AI risk recommendations)
+# google-genai: new async SDK (from google import genai) — used by riskController
+google-genai>=0.3.0
 google-generativeai>=0.8.0
 
 # Sync driver dependencies — kept for seeders/migration tooling; confirm before removing

@@ -9,17 +9,19 @@ Architecture:
   3. analyze_vendor()       — Orchestrates: score → AI → persist → return.
   4. get_latest_report()    — Fetch most-recent report for a vendor.
   5. get_report_history()   — Paginated history for a vendor.
+  6. get_risk_analytics()   — Aggregated analytics for the /analytics dashboard.
 """
 
 from __future__ import annotations
 
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import cast, func, select, text
+from sqlalchemy.dialects.postgresql import DATE
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.RiskReport import CertificationStatus, RiskReport
@@ -81,6 +83,7 @@ def _report_to_dict(report: RiskReport) -> dict:
         "certification_status": report.certification_status,
         "business_age_years":   report.business_age_years,
         "ai_recommendation":    report.ai_recommendation,
+        "ai_used":              bool(report.ai_used),
         "created_at":           report.created_at.isoformat() if report.created_at else None,
         "updated_at":           report.updated_at.isoformat() if report.updated_at else None,
     }
@@ -286,7 +289,7 @@ Be direct and specific. Do not use bullet points. Write in plain prose."""
 
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash",
             contents=prompt,
         )
         text = (response.text or "").strip()
@@ -370,14 +373,13 @@ async def analyze_vendor(
         certification_status=cert_status,
         business_age_years=business_age_years,
         ai_recommendation=recommendation,
+        ai_used=used_ai,          # real boolean, set at write-time
     )
     db.add(report)
     await db.flush()
     await db.refresh(report)
 
-    result = _report_to_dict(report)
-    result["ai_used"] = used_ai  # expose to callers so tests can verify
-    return result
+    return _report_to_dict(report)  # ai_used now included via _report_to_dict
 
 # ---------------------------------------------------------------------------
 # 4. GET /api/risk/{vendorId} — most-recent report
@@ -442,4 +444,203 @@ async def get_report_history(
         "count":     len(reports),
         "limit":     limit,
         "offset":    offset,
+    }
+
+# ---------------------------------------------------------------------------
+# 6. GET /api/risk/analytics — aggregated dashboard data
+# ---------------------------------------------------------------------------
+
+async def get_risk_analytics(db: AsyncSession, trend_days: int = 30) -> dict:
+    """
+    Return aggregated analytics over all risk_reports and messaging tables.
+
+    Sections returned
+    -----------------
+    summary              — high-level counts and averages
+    score_distribution   — count of reports in 5 score buckets (0-20 … 80-100)
+    score_trend          — daily average overall_risk_score for the last `trend_days` days
+    fraud_flag_frequency — count per distinct fraud-flag string, sorted descending
+    ai_usage             — total reports, AI-generated count, fallback count, pct
+    cert_status_breakdown — count per certification_status value
+    messaging_activity   — conversation count, message volume by day (last 30 d),
+                           message type breakdown
+    """
+
+    # ------------------------------------------------------------------
+    # 1. Summary
+    # ------------------------------------------------------------------
+    summary_row = await db.execute(text("""
+        SELECT
+            COUNT(*)                                    AS total_reports,
+            COUNT(DISTINCT vendor_id)                   AS distinct_vendors,
+            ROUND(AVG(overall_risk_score)::numeric, 1)  AS avg_overall_score,
+            ROUND(AVG(financial_risk_score)::numeric, 1) AS avg_financial_score,
+            ROUND(AVG(delivery_risk_score)::numeric, 1)  AS avg_delivery_score,
+            COUNT(*) FILTER (WHERE ai_used = true)       AS ai_generated_count,
+            COUNT(*) FILTER (WHERE ai_used = false)      AS fallback_count
+        FROM risk_reports;
+    """))
+    s = summary_row.fetchone()
+    total = int(s[0]) if s[0] else 0
+    ai_count   = int(s[5]) if s[5] else 0
+    fb_count   = int(s[6]) if s[6] else 0
+    ai_pct     = round(ai_count / total * 100, 1) if total else 0.0
+
+    summary = {
+        "total_reports":       total,
+        "distinct_vendors":    int(s[1]) if s[1] else 0,
+        "avg_overall_score":   float(s[2]) if s[2] else 0.0,
+        "avg_financial_score": float(s[3]) if s[3] else 0.0,
+        "avg_delivery_score":  float(s[4]) if s[4] else 0.0,
+    }
+
+    # ------------------------------------------------------------------
+    # 2. Score distribution (5 buckets)
+    # ------------------------------------------------------------------
+    dist_rows = await db.execute(text("""
+        SELECT
+            CASE
+                WHEN overall_risk_score < 20  THEN '0-19'
+                WHEN overall_risk_score < 40  THEN '20-39'
+                WHEN overall_risk_score < 60  THEN '40-59'
+                WHEN overall_risk_score < 80  THEN '60-79'
+                ELSE                               '80-100'
+            END   AS bucket,
+            COUNT(*) AS count
+        FROM  risk_reports
+        GROUP BY bucket
+        ORDER BY bucket;
+    """))
+    # Ensure all 5 buckets are always present (even if count = 0)
+    bucket_defaults = {"0-19": 0, "20-39": 0, "40-59": 0, "60-79": 0, "80-100": 0}
+    for row in dist_rows.fetchall():
+        bucket_defaults[row[0]] = int(row[1])
+    score_distribution = [
+        {"bucket": k, "count": v} for k, v in bucket_defaults.items()
+    ]
+
+    # ------------------------------------------------------------------
+    # 3. 30-day score trend (daily average)
+    # ------------------------------------------------------------------
+    trend_rows = await db.execute(text(f"""
+        SELECT
+            created_at::date                            AS day,
+            ROUND(AVG(overall_risk_score)::numeric, 1)  AS avg_score,
+            COUNT(*)                                    AS report_count
+        FROM  risk_reports
+        WHERE created_at >= NOW() - INTERVAL '{int(trend_days)} days'
+        GROUP BY day
+        ORDER BY day ASC;
+    """))
+    score_trend = [
+        {
+            "date":         str(r[0]),
+            "avg_score":    float(r[1]) if r[1] else 0.0,
+            "report_count": int(r[2]),
+        }
+        for r in trend_rows.fetchall()
+    ]
+
+    # ------------------------------------------------------------------
+    # 4. Fraud flag frequency
+    # PostgreSQL unnest() expands the ARRAY column into individual rows.
+    # ------------------------------------------------------------------
+    flag_rows = await db.execute(text("""
+        SELECT
+            flag,
+            COUNT(*) AS occurrences
+        FROM (
+            SELECT unnest(fraud_indicators) AS flag
+            FROM   risk_reports
+            WHERE  array_length(fraud_indicators, 1) > 0
+        ) sub
+        GROUP BY flag
+        ORDER BY occurrences DESC;
+    """))
+    fraud_flag_frequency = [
+        {"flag": r[0], "count": int(r[1])}
+        for r in flag_rows.fetchall()
+    ]
+
+    # ------------------------------------------------------------------
+    # 5. AI usage
+    # ------------------------------------------------------------------
+    ai_usage = {
+        "total_reports":    total,
+        "ai_generated":     ai_count,
+        "rule_based":       fb_count,
+        "ai_generated_pct": ai_pct,
+    }
+
+    # ------------------------------------------------------------------
+    # 6. Certification status breakdown
+    # ------------------------------------------------------------------
+    cert_rows = await db.execute(text("""
+        SELECT certification_status, COUNT(*) AS count
+        FROM   risk_reports
+        GROUP  BY certification_status
+        ORDER  BY count DESC;
+    """))
+    cert_status_breakdown = [
+        {"status": r[0], "count": int(r[1])}
+        for r in cert_rows.fetchall()
+    ]
+
+    # ------------------------------------------------------------------
+    # 7. Messaging activity
+    # ------------------------------------------------------------------
+    convo_row = await db.execute(text("""
+        SELECT COUNT(*) FROM conversations;
+    """))
+    conversation_count = int((convo_row.scalar() or 0))
+
+    msg_volume_rows = await db.execute(text("""
+        SELECT
+            created_at::date  AS day,
+            COUNT(*)          AS message_count
+        FROM  messages
+        WHERE created_at >= NOW() - INTERVAL '30 days'
+          AND is_deleted = false
+        GROUP BY day
+        ORDER BY day ASC;
+    """))
+    message_volume_by_day = [
+        {"date": str(r[0]), "count": int(r[1])}
+        for r in msg_volume_rows.fetchall()
+    ]
+
+    type_rows = await db.execute(text("""
+        SELECT
+            message_type::text  AS mtype,
+            COUNT(*)            AS count
+        FROM  messages
+        WHERE is_deleted = false
+        GROUP BY mtype
+        ORDER BY count DESC;
+    """))
+    message_type_breakdown = [
+        {"type": r[0], "count": int(r[1])}
+        for r in type_rows.fetchall()
+    ]
+
+    total_messages_row = await db.execute(text("""
+        SELECT COUNT(*) FROM messages WHERE is_deleted = false;
+    """))
+    total_messages = int((total_messages_row.scalar() or 0))
+
+    messaging_activity = {
+        "conversation_count":    conversation_count,
+        "total_messages":        total_messages,
+        "message_volume_by_day": message_volume_by_day,
+        "message_type_breakdown": message_type_breakdown,
+    }
+
+    return {
+        "summary":               summary,
+        "score_distribution":    score_distribution,
+        "score_trend":           score_trend,
+        "fraud_flag_frequency":  fraud_flag_frequency,
+        "ai_usage":              ai_usage,
+        "cert_status_breakdown": cert_status_breakdown,
+        "messaging_activity":    messaging_activity,
     }

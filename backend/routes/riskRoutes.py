@@ -26,6 +26,7 @@ from controllers.riskController import (
     analyze_vendor,
     get_latest_report,
     get_report_history,
+    get_risk_analytics,
 )
 from database.session import get_db
 
@@ -142,6 +143,34 @@ async def route_get_history(
     Use `offset` + `limit` for pagination.
     """
     data = await get_report_history(db, vendorId, limit, offset)
+    return _ok(data)
+
+
+@router.get(
+    "/analytics",
+    summary="Risk analytics dashboard data",
+    response_description="Aggregated risk metrics: score distribution, trend, fraud flags, AI usage, cert breakdown, messaging activity.",
+    status_code=200,
+)
+async def route_get_analytics(
+    trend_days: int = Query(default=30, ge=1, le=365, description="Number of days for the score trend window."),
+    db: AsyncSession = Depends(get_db),
+    _current_user: str = Depends(get_current_user_id),
+) -> JSONResponse:
+    """
+    **GET /api/risk/analytics**
+
+    Returns all data required by the Risk Analytics Dashboard in a single call:
+
+    - `summary`               — totals, distinct vendors, average scores
+    - `score_distribution`    — count of reports per 20-point bucket
+    - `score_trend`           — daily average overall score (last `trend_days` days)
+    - `fraud_flag_frequency`  — occurrences per flag string, sorted descending
+    - `ai_usage`              — AI-generated vs rule-based report counts + pct
+    - `cert_status_breakdown` — count per certification status
+    - `messaging_activity`    — conversation count, message volume, type split
+    """
+    data = await get_risk_analytics(db, trend_days=trend_days)
     return _ok(data)
 
 
