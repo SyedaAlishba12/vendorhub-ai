@@ -1,0 +1,92 @@
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database.connection import get_db
+from controllers.dashboardController import DashboardController
+from common.middleware.authMiddleware import get_current_user
+from models.RecentSearch import RecentSearch
+
+router = APIRouter(
+    prefix="/api/dashboard",
+    tags=["Dashboard"]
+)
+
+
+@router.get("/buyer")
+async def get_buyer_dashboard(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    try:
+        return await DashboardController.get_buyer_dashboard(
+            db,
+            user_id
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+
+@router.get("/statistics")
+async def get_statistics(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    return await DashboardController.get_dashboard_statistics(
+        db,
+        user_id
+    )
+
+
+@router.get("/recommendations")
+async def get_recommendations(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    return await DashboardController.get_ai_recommendations(
+        db,
+        user_id
+    )
+
+
+@router.get("/orders")
+async def get_orders(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    return await DashboardController.get_orders(
+        db,
+        user_id
+    )
+
+
+@router.get("/activity")
+async def get_activity(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    return await DashboardController.get_activity(
+        db,
+        user_id
+    )
+@router.post("/searches")
+async def add_search(
+    query: str,
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    try:
+        buyer = await DashboardService.get_buyer_by_user_id(db, user_id)
+        search = RecentSearch(buyer_id=buyer.id, query=query)
+        db.add(search)
+        await db.commit()
+        return {"message": "Search saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

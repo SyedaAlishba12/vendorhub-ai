@@ -22,13 +22,11 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onSelectTab }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Buyer Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-    { id: 'ai-search', label: 'AI Supplier Search', icon: Search, tag: 'AI', href: '/ai-search' },
+    { id: 'dashboard', label: 'Buyer Dashboard', icon: LayoutDashboard, href: '/' },
+    { id: 'ai-search', label: 'AI Supplier Search', icon: Search, tag: 'AI', href: '/search' },
     { id: 'vendors', label: 'Vendor Directory', icon: Store, href: '/vendors' },
     { id: 'catalog', label: 'Product Catalog', icon: PackageCheck, href: '/catalog' },
-    { id: 'rfq-manager', label: 'RFQs & Quotes', icon: FileText, href: '/rfq-manager' },
-    { id: 'orders', label: 'Order Management', icon: ShoppingBag, href: '/orders' },
-    { id: 'messages', label: 'AI Assistant & Chat', icon: MessageSquare, href: '/messages' },
+    { id: 'rfq-manager', label: 'RFQs & Quotes', icon: FileText, href: '/rfq' },
     { id: 'risk-analysis', label: 'Risk Analysis', icon: ShieldAlert, tag: 'AI', href: '/risk-analysis' },
     { id: 'documents', label: 'Smart Documents', icon: FolderArchive, href: '/documents' },
     { id: 'reviews', label: 'Ratings & Reviews', icon: Star, href: '/reviews' },

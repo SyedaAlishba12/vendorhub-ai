@@ -12,11 +12,11 @@ class Order(Base):
     total_amount = Column(Float, nullable=False)
     status = Column(String, default="PROCESSING")
     payment_status = Column(String, default="PAID")
-    created_at = Column(DateTime, default=datetime.utcnow)  # <--- Clean fix: Offset-naive UTC for PostgreSQL
-    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
     items = relationship("OrderItem", back_populates="order")
     shipment = relationship("Shipment", back_populates="order", uselist=False)
-    
+
     has_dispute = Column(Boolean, default=False)
     cancellation_reason = Column(String, nullable=True)
     dispute_reason = Column(String, nullable=True)

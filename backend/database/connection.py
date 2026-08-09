@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DatabaseLogger")
 
 # Neon requires SSL for asyncpg. Adding ssl=True directly to connect_args
+
 engine = create_async_engine(
     DATABASE_URL, 
     echo=False,

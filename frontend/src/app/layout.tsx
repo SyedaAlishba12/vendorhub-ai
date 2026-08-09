@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { 
   Sparkles, Search, Bell, User, ShieldCheck, LayoutDashboard, 
   Store, PackageCheck, FileText, ShoppingBag, MessageSquare, 
-  ShieldAlert, FolderArchive, Star, BarChart3, Settings 
+  ShieldAlert, FolderArchive, Star, BarChart3, Settings, CreditCard
 } from 'lucide-react';
 import './globals.css';
 
@@ -15,18 +15,33 @@ const menuItems = [
   { label: 'AI Supplier Search', icon: Search, tag: 'AI', href: '/ai-search' },
   { label: 'Vendor Directory', icon: Store, href: '/vendors' },
   { label: 'Product Catalog', icon: PackageCheck, href: '/catalog' },
-  { label: 'RFQs & Quotes', icon: FileText, href: '/rfq-manager' },
+  { label: 'RFQs & Quotes', icon: FileText, href: '/rfq' },
   { label: 'Order Management', icon: ShoppingBag, href: '/orders' },
   { label: 'AI Assistant & Chat', icon: MessageSquare, href: '/messages' },
   { label: 'Risk Analysis', icon: ShieldAlert, tag: 'AI', href: '/risk-analysis' },
   { label: 'Smart Documents', icon: FolderArchive, href: '/documents' },
   { label: 'Ratings & Reviews', icon: Star, href: '/reviews' },
   { label: 'Platform Analytics', icon: BarChart3, href: '/analytics' },
+  { label: 'Pricing & Plans', icon: CreditCard, href: '/pricing' },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isAdmin = pathname?.startsWith('/admin');
+  const isLanding = pathname === '/landing';
 
+  // For public/admin pages, render only children (no header/sidebar)
+  if (isAdmin || isLanding) {
+    return (
+      <html lang="en">
+        <body className="min-h-screen bg-slate-50 font-sans antialiased">
+          {children}
+        </body>
+      </html>
+    );
+  }
+
+  // Normal pages with header and sidebar
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-slate-50 font-sans antialiased">

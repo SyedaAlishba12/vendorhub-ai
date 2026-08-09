@@ -23,7 +23,7 @@ export default function DocumentsPage() {
   const [actionLoading, setActionLoading] = useState<{ [key: string]: string | null }>({});
 
   const fetchDocuments = () => {
-    fetch(`${API_BASE_URL}/documents?category=${category}&search=${search}`)
+    fetch(`${API_BASE_URL}/documents/?category=${category}&search=${search}`)
       .then((res) => res.json())
       .then((data) => setDocuments(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Fetch documents error:", err));
