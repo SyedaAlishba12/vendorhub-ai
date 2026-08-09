@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from models.base import Base
 
@@ -7,6 +7,11 @@ class Vendor(Base):
     __tablename__ = "vendors"
 
     id = Column(Integer, primary_key=True, index=True)
+
+    # Links this vendor listing to a User account (Sayeel's Auth/Vendor Dashboard scope).
+    # Nullable because demo/seeded vendors aren't tied to a real registered account yet.
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
     company_name = Column(String, nullable=False)
     business_description = Column(String, nullable=True)
     country = Column(String, nullable=False)

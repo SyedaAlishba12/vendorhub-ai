@@ -17,7 +17,7 @@ class VendorBase(BaseModel):
 
 
 class VendorCreate(VendorBase):
-    pass
+    user_id: Optional[int] = None
 
 
 class VendorUpdate(BaseModel):
@@ -32,10 +32,12 @@ class VendorUpdate(BaseModel):
     contact_phone: Optional[str] = None
     languages: Optional[str] = None
     is_verified: Optional[bool] = None
+    user_id: Optional[int] = None
 
 
 class VendorResponse(VendorBase):
     id: int
+    user_id: Optional[int] = None
     rating: float
     response_time_hours: Optional[int] = None
     is_verified: bool

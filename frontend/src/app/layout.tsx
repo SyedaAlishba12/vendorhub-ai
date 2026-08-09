@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 import AppFrame from "@/components/UI/AppFrame";
 
 export const metadata: Metadata = {
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AppFrame>{children}</AppFrame>
+        <AuthProvider>
+          <AppFrame>{children}</AppFrame>
+        </AuthProvider>
       </body>
     </html>
   );

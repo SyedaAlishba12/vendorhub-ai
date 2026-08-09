@@ -2,6 +2,7 @@ import asyncio
 import logging
 from database.connection import AsyncSessionLocal, engine
 from models.base import Base
+from models.user import User  # noqa: F401 - ensures users table is registered with Base
 from database.seeders.seed_vendors import seed_vendors
 from database.seeders.seed_products import seed_products
 from database.seeders.seed_quotes import seed_quotes
