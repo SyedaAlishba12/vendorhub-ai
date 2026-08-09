@@ -10,6 +10,7 @@ from routes.orderRoutes import router as order_router
 from routes.documentRoutes import router as doc_router
 from routes.reviewRoutes import router as review_router
 from routes.adminReviewRoutes import router as admin_router
+from routes.fraudRoutes import router as fraud_router
 
 load_dotenv()
 
@@ -31,6 +32,7 @@ app.include_router(order_router)
 app.include_router(doc_router)
 app.include_router(review_router)
 app.include_router(admin_router)
+app.include_router(fraud_router)
 
 @app.get("/")
 def root():
