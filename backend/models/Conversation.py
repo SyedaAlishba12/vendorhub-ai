@@ -10,7 +10,7 @@ from sqlalchemy import Column, DateTime, text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.sql import func
 
-from backend.database.base import Base
+from database.base import Base
 
 
 class Conversation(Base):

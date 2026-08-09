@@ -5,6 +5,7 @@ uvicorn[standard]>=0.30.0
 # Database — async SQLAlchemy 2.0 + PostgreSQL asyncpg driver
 sqlalchemy>=2.0.0
 asyncpg>=0.29.0
+greenlet>=3.5.4
 
 # Validation
 pydantic>=2.0.0
@@ -17,3 +18,16 @@ aiofiles>=23.0.0
 
 # Environment variable loading
 python-dotenv>=1.0.0
+
+# AI — Gemini SDK (used by riskController for AI risk recommendations)
+google-generativeai>=0.8.0
+
+# Sync driver dependencies — kept for seeders/migration tooling; confirm before removing
+asn1crypto==1.5.1
+pg8000==1.31.5
+psycopg2-binary==2.9.12
+python-dateutil==2.9.0.post0
+scramp==1.4.15
+six==1.17.0
+typing_extensions==4.16.0
+reportlab>=5.0.0

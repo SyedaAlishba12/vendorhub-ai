@@ -23,8 +23,8 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.Conversation import Conversation
-from backend.models.Message import Message, MessageType
+from models.Conversation import Conversation
+from models.Message import Message, MessageType
 
 # ---------------------------------------------------------------------------
 # File upload configuration

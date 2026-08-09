@@ -13,7 +13,7 @@ class Base(DeclarativeBase):
     Project-wide declarative base for SQLAlchemy 2.0 ORM models.
 
     Usage:
-        from backend.database.base import Base
+        from database.base import Base
 
         class MyModel(Base):
             __tablename__ = "my_table"

@@ -99,7 +99,7 @@ async def create_database_if_missing():
 from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
 
 # Import models so they register on Base.metadata BEFORE create_all runs
-from backend.database.base import Base              # noqa: E402, F401
+from database.base import Base              # noqa: E402, F401
 import backend.models.Conversation                  # noqa: E402, F401
 import backend.models.Message                       # noqa: E402, F401
 

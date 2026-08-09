@@ -12,7 +12,7 @@ from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, ForeignKey, Te
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.sql import func
 
-from backend.database.base import Base
+from database.base import Base
 
 
 # ---------------------------------------------------------------------------

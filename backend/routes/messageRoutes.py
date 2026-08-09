@@ -26,15 +26,15 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.common.deps import get_current_user_id
-from backend.controllers.messageController import (
+from common.deps import get_current_user_id
+from controllers.messageController import (
     delete_message,
     get_messages,
     list_conversations,
     send_message,
     upload_file,
 )
-from backend.database.session import get_db
+from database.session import get_db
 
 router = APIRouter(prefix="/api/messages", tags=["Messages"])
 

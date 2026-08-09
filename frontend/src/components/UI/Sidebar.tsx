@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { 
   LayoutDashboard, 
   Search, 
@@ -19,19 +20,19 @@ interface SidebarProps {
   onSelectTab?: (tabId: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard' }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onSelectTab }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Buyer Dashboard', icon: LayoutDashboard },
-    { id: 'ai-search', label: 'AI Supplier Search', icon: Search, tag: 'AI' },
-    { id: 'vendors', label: 'Vendor Directory', icon: Store },
-    { id: 'catalog', label: 'Product Catalog', icon: PackageCheck }, // Added Module 6
-    { id: 'rfq-manager', label: 'RFQs & Quotes', icon: FileText },
-    { id: 'orders', label: 'Order Management', icon: ShoppingBag }, // Added Module 12
-    { id: 'messages', label: 'AI Assistant & Chat', icon: MessageSquare },
-    { id: 'risk-analysis', label: 'Risk Analysis', icon: ShieldAlert, tag: 'AI' },
-    { id: 'documents', label: 'Smart Documents', icon: FolderArchive },
-    { id: 'reviews', label: 'Ratings & Reviews', icon: Star },
-    { id: 'analytics', label: 'Platform Analytics', icon: BarChart3 },
+    { id: 'dashboard', label: 'Buyer Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+    { id: 'ai-search', label: 'AI Supplier Search', icon: Search, tag: 'AI', href: '/ai-search' },
+    { id: 'vendors', label: 'Vendor Directory', icon: Store, href: '/vendors' },
+    { id: 'catalog', label: 'Product Catalog', icon: PackageCheck, href: '/catalog' },
+    { id: 'rfq-manager', label: 'RFQs & Quotes', icon: FileText, href: '/rfq-manager' },
+    { id: 'orders', label: 'Order Management', icon: ShoppingBag, href: '/orders' },
+    { id: 'messages', label: 'AI Assistant & Chat', icon: MessageSquare, href: '/messages' },
+    { id: 'risk-analysis', label: 'Risk Analysis', icon: ShieldAlert, tag: 'AI', href: '/risk-analysis' },
+    { id: 'documents', label: 'Smart Documents', icon: FolderArchive, href: '/documents' },
+    { id: 'reviews', label: 'Ratings & Reviews', icon: Star, href: '/reviews' },
+    { id: 'analytics', label: 'Platform Analytics', icon: BarChart3, href: '/analytics' },
   ];
 
   return (
@@ -46,8 +47,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard' }) => 
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
-                <button
+                <Link
                   key={item.id}
+                  href={item.href}
+                  onClick={() => onSelectTab && onSelectTab(item.id)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive 
                       ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 shadow-sm' 
@@ -63,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard' }) => 
                       {item.tag}
                     </span>
                   )}
-                </button>
+                </Link>
               );
             })}
           </nav>
@@ -71,10 +74,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard' }) => 
       </div>
 
       <div className="border-t border-slate-800 pt-3">
-        <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-all">
+        <Link 
+          href="/settings"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-all"
+        >
           <Settings className="h-4 w-4 text-slate-500" />
           <span>System Settings</span>
-        </button>
+        </Link>
       </div>
     </aside>
   );
