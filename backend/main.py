@@ -12,6 +12,7 @@ from routes.reviewRoutes import router as review_router
 from routes.adminReviewRoutes import router as admin_router
 from routes.fraudRoutes import router as fraud_router
 from routes.negotiationRoutes import router as negotiation_router
+from routes.integrationsRoutes import router as integrations_router
 
 load_dotenv()
 
@@ -35,6 +36,7 @@ app.include_router(review_router)
 app.include_router(admin_router)
 app.include_router(fraud_router)
 app.include_router(negotiation_router)
+app.include_router(integrations_router)
 
 @app.get("/")
 def root():
