@@ -42,5 +42,11 @@ logs/
 uploads/
 temp/
 
-# ===== OS =====
 Thumbs.db
+
+# ===== Debugging & Throwaway =====
+verify*.py
+test_upload.txt
+
+# ===== Antigravity IDE State =====
+.gemini/
