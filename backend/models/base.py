@@ -1,4 +1,3 @@
-# backend/models/base.py
-from database.connection import Base
+from sqlalchemy.orm import declarative_base
 
-__all__ = ["Base"]
+Base = declarative_base()

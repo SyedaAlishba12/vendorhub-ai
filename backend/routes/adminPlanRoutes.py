@@ -4,8 +4,8 @@ from sqlalchemy import select, func
 from database.connection import get_db
 from controllers.pricingController import PricingController
 from schemas.pricingSchemas import PricingPlanCreate, PricingPlanUpdate
-from models.User import User
-from models.Vendor import Vendor
+from models.user import User
+from models.vendors import Vendor
 from models.Order import Order
 from models.Subscription import Subscription
 from models.BillingHistory import BillingHistory

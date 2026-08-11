@@ -1,24 +1,21 @@
-
 import logging
 from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from models.Review import ReviewDB
 from models.Rating import RatingDB
-from models.ReviewReport import ReviewReportDB
 
 logger = logging.getLogger("Seeder")
-
 
 async def seed_reviews():
     from database.connection import AsyncSessionLocal
 
     async with AsyncSessionLocal() as db:
         try:
-            logger.info("🌱 Seeding Reviews, Ratings & Reports...")
+            logger.info("🌱 Seeding Reviews & Ratings...")
 
             # Check if reviews already exist
             result = await db.execute(select(ReviewDB))
             existing_reviews = result.scalars().all()
-
             if existing_reviews:
                 logger.info("ℹ️ Reviews already seeded. Skipping...")
                 return
@@ -77,13 +74,9 @@ async def seed_reviews():
                 }
             ]
 
-            # -----------------------------------
-            # Create Reviews & Ratings
-            # -----------------------------------
-
             for item in reviews_data:
                 r_info = item["ratings"]
-
+                
                 review = ReviewDB(
                     id=item["id"],
                     vendor_id=item["vendor_id"],
@@ -92,7 +85,7 @@ async def seed_reviews():
                     product_id=item["product_id"],
                     comment=item["comment"]
                 )
-
+                
                 rating = RatingDB(
                     id=r_info["id"],
                     review_id=item["id"],
@@ -103,63 +96,14 @@ async def seed_reviews():
                     quality_rating=r_info["quality_rating"],
                     service_rating=r_info["service_rating"]
                 )
-
+                
                 db.add(review)
                 db.add(rating)
 
-            await db.flush()
-
-            # -----------------------------------
-            # Create Review Reports
-            # -----------------------------------
-
-            reports_data = [
-                {
-                    "id": "RPT-001",
-                    "review_id": "REV-001",
-                    "reported_by": "BUY-002",
-                    "reason": "The review contains misleading information.",
-                    "status": "PENDING"
-                },
-                {
-                    "id": "RPT-002",
-                    "review_id": "REV-002",
-                    "reported_by": "BUY-001",
-                    "reason": "The review may contain inappropriate content.",
-                    "status": "PENDING"
-                }
-            ]
-
-            for report_data in reports_data:
-                report = ReviewReportDB(
-                    id=report_data["id"],
-                    review_id=report_data["review_id"],
-                    reported_by=report_data["reported_by"],
-                    reason=report_data["reason"],
-                    status=report_data["status"]
-                )
-
-                db.add(report)
-
-            # Mark reported reviews
-            review_1 = await db.get(ReviewDB, "REV-001")
-            review_2 = await db.get(ReviewDB, "REV-002")
-
-            if review_1:
-                review_1.is_reported = True
-
-            if review_2:
-                review_2.is_reported = True
-
             await db.commit()
-
-            logger.info("✅ Reviews, Ratings & Reports seeded successfully!")
-            logger.info("📋 Added 3 reviews")
-            logger.info("⭐ Added 3 ratings")
-            logger.info("🚩 Added 2 pending reports")
+            logger.info("✅ Reviews & Ratings seeded successfully!")
 
         except Exception as e:
             await db.rollback()
             logger.error(f"❌ Error seeding reviews: {e}")
-            raise
-
+            raise e

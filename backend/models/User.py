@@ -1,27 +1,24 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
-from datetime import datetime
-from database.connection import Base
-import enum
+from sqlalchemy.sql import func
+from models.base import Base
 
-class UserRole(str, enum.Enum):
-    BUYER = "buyer"
-    VENDOR = "vendor"
-    ADMIN = "admin"
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    username = Column(String(255), unique=True, index=True, nullable=False)
-    password_hash = Column(String(500), nullable=False)
-    full_name = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole), default=UserRole.BUYER)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True, index=True)
+    hashed_password = Column(String, nullable=False)
+    role = Column(String, nullable=False, default="buyer")
     is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    buyer_profile = relationship("Buyer", back_populates="user", uselist=False)
-    vendor_profile = relationship("Vendor", back_populates="user", uselist=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Buyer module relationship
+    buyer_profile = relationship(
+        "Buyer",
+        back_populates="user",
+        uselist=False
+    )

@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel
+
 
 class RecentRFQResponse(BaseModel):
     id: int
@@ -17,6 +19,7 @@ class RecentRFQResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class DashboardStatsResponse(BaseModel):
     active_rfqs: int
     pending_quotations: int
@@ -24,6 +27,7 @@ class DashboardStatsResponse(BaseModel):
     total_vendors: int
     total_spending: float
     monthly_spending: float
+
 
 class DashboardResponse(BaseModel):
     stats: DashboardStatsResponse

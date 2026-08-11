@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from database.connection import Base
+from models.base import Base
 
 class BillingHistory(Base):
     __tablename__ = "billing_history"

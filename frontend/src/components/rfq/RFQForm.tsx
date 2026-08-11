@@ -98,7 +98,10 @@ export default function RFQForm({ initialData }: RFQFormProps) {
     try {
       setLoading(true);
       setError(null);
-      const payload = { ...formData, quantity: Number(formData.quantity), status: 'draft' };
+    const payload = {
+    ...formData,
+    quantity: Number(formData.quantity)
+};
 
       let rfqId = initialData?.id;
       if (rfqId) {

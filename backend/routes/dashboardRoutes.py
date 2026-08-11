@@ -4,8 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.connection import get_db
 from controllers.dashboardController import DashboardController
+from services.dashboardService import DashboardService
 from common.middleware.authMiddleware import get_current_user
 from models.RecentSearch import RecentSearch
+
 
 router = APIRouter(
     prefix="/api/dashboard",
@@ -30,7 +32,7 @@ async def get_buyer_dashboard(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail="Failed to fetch buyer dashboard"
         )
 
 
@@ -76,6 +78,8 @@ async def get_activity(
         db,
         user_id
     )
+
+
 @router.post("/searches")
 async def add_search(
     query: str,
@@ -83,10 +87,34 @@ async def add_search(
     user_id: int = Depends(get_current_user)
 ):
     try:
-        buyer = await DashboardService.get_buyer_by_user_id(db, user_id)
-        search = RecentSearch(buyer_id=buyer.id, query=query)
+        buyer = await DashboardService.get_buyer_by_user_id(
+            db,
+            user_id
+        )
+
+        search = RecentSearch(
+            buyer_id=buyer.id,
+            query=query
+        )
+
         db.add(search)
         await db.commit()
-        return {"message": "Search saved"}
+        await db.refresh(search)
+
+        return {
+            "message": "Search saved"
+        }
+
+    except HTTPException:
+        raise
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        await db.rollback()
+
+        print(f"Search save error: {e}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to save search"
+        )
+

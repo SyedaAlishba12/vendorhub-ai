@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from database.connection import Base
+from models.base import Base
 
 class PricingPlan(Base):
     __tablename__ = "pricing_plans"

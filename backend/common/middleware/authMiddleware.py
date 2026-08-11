@@ -1,12 +1,24 @@
-from fastapi import HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends
+from fastapi.security import (
+    HTTPBearer,
+    HTTPAuthorizationCredentials
+)
 
-security = HTTPBearer(auto_error=False)
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> int:
+security = HTTPBearer(
+    auto_error=False
+)
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> int:
+
     """
-    TEMPORARY TESTING AUTH - returns user ID 1
-    Replace with real JWT verification when Sayeel's module is ready.
+    TEMPORARY TESTING AUTH.
+
+    Returns user ID 1 until the real JWT
+    authentication module is connected.
     """
-    # For now, always return user id 1 (the seeded buyer)
+
     return 1

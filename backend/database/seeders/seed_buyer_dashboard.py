@@ -1,22 +1,26 @@
+from datetime import datetime
 
-from database.connection import AsyncSessionLocal
-from models.Buyer import Buyer, Dashboard
-from models.User import User, UserRole
-from models.RFQ import RFQ, RFQStatus
+import asyncio
+import bcrypt
 
 from sqlalchemy import select
-from datetime import datetime
-import bcrypt
+
+from database.connection import AsyncSessionLocal
+
+from models.user import User
+from models.Buyer import Buyer, Dashboard
+from models.RFQ import RFQ, RFQStatus
 
 
 async def seed_buyer_dashboard():
-    """Seed a test buyer with dashboard and sample RFQs"""
+    """Seed a test buyer with dashboard and sample RFQs."""
 
     async with AsyncSessionLocal() as db:
 
-        # Check if buyer already exists to avoid duplicates
         result = await db.execute(
-            select(User).where(User.email == "buyer@demo.com")
+            select(User).where(
+                User.email == "buyer@demo.com"
+            )
         )
 
         existing = result.scalar_one_or_none()
@@ -25,24 +29,31 @@ async def seed_buyer_dashboard():
             print("⚠️ Buyer already exists, skipping...")
             return
 
-        # Create user
+        # -------------------------
+        # Create User
+        # -------------------------
+
+        password = bcrypt.hashpw(
+            b"password123",
+            bcrypt.gensalt()
+        ).decode("utf-8")
+
         user = User(
+            name="Demo Buyer",
             email="buyer@demo.com",
-            username="demobuyer",
-           password_hash=bcrypt.hashpw(
-    b"password123",
-    bcrypt.gensalt()
-).decode("utf-8"),
-            full_name="Demo Buyer",
-            role=UserRole.BUYER,
-            is_verified=True,
+            hashed_password=password,
+            role="buyer",
             is_active=True
         )
 
         db.add(user)
+
         await db.flush()
 
-        # Create buyer profile
+        # -------------------------
+        # Create Buyer
+        # -------------------------
+
         buyer = Buyer(
             user_id=user.id,
             company_name="Demo Company",
@@ -51,17 +62,25 @@ async def seed_buyer_dashboard():
         )
 
         db.add(buyer)
+
         await db.flush()
 
-        # Create dashboard
+        # -------------------------
+        # Create Dashboard
+        # -------------------------
+
         dashboard = Dashboard(
             buyer_id=buyer.id
         )
 
         db.add(dashboard)
 
-        # Create sample RFQs
+        # -------------------------
+        # Create Sample RFQs
+        # -------------------------
+
         for i in range(3):
+
             rfq = RFQ(
                 buyer_id=buyer.id,
                 rfq_ref=f"RFQ-{1000 + i}",
@@ -85,3 +104,6 @@ async def seed_buyer_dashboard():
 
         print("✅ Buyer dashboard & RFQs seeded!")
 
+
+if __name__ == "__main__":
+    asyncio.run(seed_buyer_dashboard())
