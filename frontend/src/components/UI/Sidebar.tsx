@@ -20,19 +20,20 @@ interface SidebarProps {
   onSelectTab?: (tabId: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onSelectTab }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab = '/', onSelectTab }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Buyer Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-    { id: 'ai-search', label: 'AI Supplier Search', icon: Search, tag: 'AI', href: '/ai-search' },
-    { id: 'vendors', label: 'Vendor Directory', icon: Store, href: '/vendors' },
-    { id: 'catalog', label: 'Product Catalog', icon: PackageCheck, href: '/catalog' },
-    { id: 'rfq-manager', label: 'RFQs & Quotes', icon: FileText, href: '/rfq-manager' },
-    { id: 'orders', label: 'Order Management', icon: ShoppingBag, href: '/orders' },
-    { id: 'messages', label: 'AI Assistant & Chat', icon: MessageSquare, href: '/messages' },
-    { id: 'risk-analysis', label: 'Risk Analysis', icon: ShieldAlert, tag: 'AI', href: '/risk-analysis' },
-    { id: 'documents', label: 'Smart Documents', icon: FolderArchive, href: '/documents' },
-    { id: 'reviews', label: 'Ratings & Reviews', icon: Star, href: '/reviews' },
-    { id: 'analytics', label: 'Platform Analytics', icon: BarChart3, href: '/analytics' },
+    { label: 'Buyer Dashboard', icon: LayoutDashboard, href: '/' },
+    { label: 'AI Supplier Search', icon: Search, tag: 'AI', href: '/search' },
+    { label: 'Vendor Directory', icon: Store, href: '/vendors' },
+    { label: 'Product Catalog', icon: PackageCheck, href: '/products' },
+    { label: 'RFQs', icon: FileText, href: '/rfq' },
+    { label: 'Quote Comparison', icon: FileText, href: '/quotes' },
+    { label: 'Order Management', icon: ShoppingBag, href: '/orders' },
+    { label: 'AI Assistant & Chat', icon: MessageSquare, href: '/messages' },
+    { label: 'Risk Analysis', icon: ShieldAlert, tag: 'AI', href: '/risk-analysis' },
+    { label: 'Smart Documents', icon: FolderArchive, href: '/documents' },
+    { label: 'Ratings & Reviews', icon: Star, href: '/reviews' },
+    { label: 'Platform Analytics', icon: BarChart3, href: '/analytics' },
   ];
 
   return (
@@ -45,12 +46,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab = 'dashboard', onSel
           <nav className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const isActive = activeTab === item.href;
+
               return (
                 <Link
-                  key={item.id}
+                  key={item.href}
                   href={item.href}
-                  onClick={() => onSelectTab && onSelectTab(item.id)}
+                  onClick={() => onSelectTab && onSelectTab(item.href)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive 
                       ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 shadow-sm' 
