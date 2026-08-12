@@ -49,4 +49,8 @@ async def seed_categories(db):
         db.add(CertificationType(name=name, description=desc))
 
     await db.commit()
+<<<<<<< HEAD
     logger.info(f"✅ Seeded {len(parent_names) + len(sub_categories)} categories and {len(cert_types)} certification types.")
+=======
+    logger.info(f"✅ Seeded {len(parent_names) + len(sub_categories)} categories and {len(cert_types)} certification types.")
+>>>>>>> feature/dashboard-rfq-pricing-admin

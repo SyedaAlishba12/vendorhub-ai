@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
 import {
   Sparkles,
   Search,
@@ -20,26 +21,80 @@ import {
   Star,
   BarChart3,
   Settings,
+  CreditCard,
 } from 'lucide-react';
 
 import './globals.css';
 
-
 const menuItems = [
-  { label: 'Buyer Dashboard', icon: LayoutDashboard, href: '/' },
-  { label: 'AI Supplier Search', icon: Search, tag: 'AI', href: '/vendors' },
-  { label: 'Vendor Directory', icon: Store, href: '/vendors' },
-  { label: 'Product Catalog', icon: PackageCheck, href: '/products' },          // ← changed
-  { label: 'RFQs', icon: FileText, href: '/rfq' },                              // ← changed
-  { label: 'Quote Comparison', icon: FileText, href: '/quotes' },               // ← added
-  { label: 'Order Management', icon: ShoppingBag, href: '/orders' },
-  { label: 'AI Assistant & Chat', icon: MessageSquare, href: '/messages' },
-  { label: 'Risk Analysis', icon: ShieldAlert, tag: 'AI', href: '/risk-analysis' },
-  { label: 'Smart Documents', icon: FolderArchive, href: '/documents' },
-  { label: 'Ratings & Reviews', icon: Star, href: '/reviews' },
-  { label: 'Platform Analytics', icon: BarChart3, href: '/analytics' },
+  {
+    label: 'Buyer Dashboard',
+    icon: LayoutDashboard,
+    href: '/',
+  },
+  {
+    label: 'AI Supplier Search',
+    icon: Search,
+    tag: 'AI',
+    href: '/vendors',
+  },
+  {
+    label: 'Vendor Directory',
+    icon: Store,
+    href: '/vendors',
+  },
+  {
+    label: 'Product Catalog',
+    icon: PackageCheck,
+    href: '/products',
+  },
+  {
+    label: 'RFQs',
+    icon: FileText,
+    href: '/rfq',
+  },
+  {
+    label: 'Quote Comparison',
+    icon: FileText,
+    href: '/quotes',
+  },
+  {
+    label: 'Order Management',
+    icon: ShoppingBag,
+    href: '/orders',
+  },
+  {
+    label: 'AI Assistant & Chat',
+    icon: MessageSquare,
+    href: '/messages',
+  },
+  {
+    label: 'Risk Analysis',
+    icon: ShieldAlert,
+    tag: 'AI',
+    href: '/risk-analysis',
+  },
+  {
+    label: 'Smart Documents',
+    icon: FolderArchive,
+    href: '/documents',
+  },
+  {
+    label: 'Ratings & Reviews',
+    icon: Star,
+    href: '/reviews',
+  },
+  {
+    label: 'Platform Analytics',
+    icon: BarChart3,
+    href: '/analytics',
+  },
+  {
+    label: 'Pricing & Plans',
+    icon: CreditCard,
+    href: '/pricing',
+  },
 ];
-
 
 export default function RootLayout({
   children,
@@ -48,13 +103,25 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
 
+  const isAdmin = pathname?.startsWith('/admin');
+  const isLanding = pathname === '/landing';
+
+  // Admin and landing pages do not use the dashboard layout
+  if (isAdmin || isLanding) {
+    return (
+      <html lang="en">
+        <body className="min-h-screen bg-slate-50 font-sans antialiased">
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   return (
     <html lang="en">
       <body className="bg-slate-50 text-slate-900">
-
         {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
-
           <div>
             <h1 className="text-lg font-black text-slate-900">
               VendorHub AI
@@ -65,6 +132,7 @@ export default function RootLayout({
             </p>
           </div>
 
+          {/* Search */}
           <div className="hidden md:flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-1.5 w-80">
             <Search className="h-4 w-4 text-slate-400" />
 
@@ -75,8 +143,8 @@ export default function RootLayout({
             />
           </div>
 
+          {/* User Section */}
           <div className="flex items-center gap-3">
-
             <button className="relative p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
               <Bell className="h-5 w-5" />
 
@@ -84,7 +152,6 @@ export default function RootLayout({
             </button>
 
             <div className="flex items-center gap-2.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-
               <div className="bg-indigo-600 text-white p-1.5 rounded-lg font-bold text-xs flex items-center justify-center">
                 <User className="h-4 w-4" />
               </div>
@@ -102,31 +169,22 @@ export default function RootLayout({
                   Buyer
                 </p>
               </div>
-
             </div>
           </div>
-
         </header>
-
 
         {/* Main Layout */}
         <div className="flex min-h-[calc(100vh-4rem)]">
-
           {/* Sidebar */}
           <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-4 shrink-0 hidden lg:flex text-slate-700">
-
             <div className="space-y-6">
-
               <div>
-
                 <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                   Platform Modules
                 </p>
 
                 <nav className="space-y-1">
-
                   {menuItems.map((item, idx) => {
-
                     const Icon = item.icon;
                     const isActive = pathname === item.href;
 
@@ -140,9 +198,7 @@ export default function RootLayout({
                             : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                         }`}
                       >
-
                         <div className="flex items-center gap-2.5">
-
                           <Icon
                             className={`h-4 w-4 ${
                               isActive
@@ -152,7 +208,6 @@ export default function RootLayout({
                           />
 
                           <span>{item.label}</span>
-
                         </div>
 
                         {item.tag && (
@@ -160,21 +215,15 @@ export default function RootLayout({
                             {item.tag}
                           </span>
                         )}
-
                       </Link>
                     );
-
                   })}
-
                 </nav>
-
               </div>
-
             </div>
 
-
+            {/* Settings */}
             <div className="border-t border-slate-200 pt-3">
-
               <Link
                 href="/settings"
                 className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-900"
@@ -183,19 +232,14 @@ export default function RootLayout({
 
                 <span>System Settings</span>
               </Link>
-
             </div>
-
           </aside>
-
 
           {/* Page Content */}
           <main className="flex-1 p-6 bg-slate-50 overflow-x-hidden">
             {children}
           </main>
-
         </div>
-
       </body>
     </html>
   );

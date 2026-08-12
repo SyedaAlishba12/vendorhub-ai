@@ -1,4 +1,5 @@
 import logging
+
 from sqlalchemy import select
 from models.vendors import Vendor
 
@@ -8,6 +9,7 @@ logger = logging.getLogger("Seeder")
 async def seed_vendors(db):
     result = await db.execute(select(Vendor))
     existing = result.scalars().first()
+
     if existing:
         logger.info("Vendors already seeded, skipping.")
         return
@@ -227,4 +229,5 @@ async def seed_vendors(db):
 
     db.add_all(vendors)
     await db.commit()
+
     logger.info(f"✅ Seeded {len(vendors)} vendors.")
