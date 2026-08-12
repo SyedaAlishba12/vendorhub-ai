@@ -1,6 +1,11 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 
 interface User {
@@ -13,28 +18,54 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (name: string, email: string, password: string, role: string) => Promise<{ success: boolean; error?: string }>;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  signup: (
+    name: string,
+    email: string,
+    password: string,
+    role: string
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = "vendorhub_token";
-const API_BASE = "http://localhost:8000";
+export const TOKEN_KEY = "vendorhub_token";
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "http://localhost:8000/api";
+
+export function AuthProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
   const router = useRouter();
 
+  // -----------------------------
+  // Fetch current logged-in user
+  // -----------------------------
   const fetchCurrentUser = async (token: string) => {
     try {
       const res = await fetch(`${API_BASE}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      if (!res.ok) throw new Error("Invalid session");
+
+      if (!res.ok) {
+        throw new Error("Invalid session");
+      }
+
       const data = await res.json();
+
       setUser(data);
     } catch {
       localStorage.removeItem(TOKEN_KEY);
@@ -44,8 +75,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // -----------------------------
+  // Check existing session
+  // -----------------------------
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
+
     if (token) {
       fetchCurrentUser(token);
     } else {
@@ -53,54 +88,125 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
+  // -----------------------------
+  // Login
+  // -----------------------------
+  const login = async (
+    email: string,
+    password: string
+  ) => {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       });
+
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        return { success: false, error: data?.detail || "Login failed." };
+
+        return {
+          success: false,
+          error: data?.detail || "Login failed.",
+        };
       }
+
       const data = await res.json();
+
+      // Store token
       localStorage.setItem(TOKEN_KEY, data.access_token);
+
+      // Store user
       setUser(data.user);
-      return { success: true };
+
+      return {
+        success: true,
+      };
     } catch {
-      return { success: false, error: "Could not reach the server." };
+      return {
+        success: false,
+        error: "Could not reach the server.",
+      };
     }
   };
 
-  const signup = async (name: string, email: string, password: string, role: string) => {
+  // -----------------------------
+  // Signup
+  // -----------------------------
+  const signup = async (
+    name: string,
+    email: string,
+    password: string,
+    role: string
+  ) => {
     try {
       const res = await fetch(`${API_BASE}/auth/signup`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          role,
+        }),
       });
+
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        return { success: false, error: data?.detail || "Signup failed." };
+
+        return {
+          success: false,
+          error: data?.detail || "Signup failed.",
+        };
       }
+
       const data = await res.json();
+
+      // Store token
       localStorage.setItem(TOKEN_KEY, data.access_token);
+
+      // Store user
       setUser(data.user);
-      return { success: true };
+
+      return {
+        success: true,
+      };
     } catch {
-      return { success: false, error: "Could not reach the server." };
+      return {
+        success: false,
+        error: "Could not reach the server.",
+      };
     }
   };
 
+  // -----------------------------
+  // Logout
+  // -----------------------------
   const logout = () => {
     localStorage.removeItem(TOKEN_KEY);
+
     setUser(null);
+
     router.push("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        signup,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -108,6 +214,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within AuthProvider");
+
+  if (!context) {
+    throw new Error(
+      "useAuth must be used within AuthProvider"
+    );
+  }
+
   return context;
 }

@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 # ============================================================
 # MODEL REGISTRATION
 # ============================================================
@@ -13,20 +14,33 @@ load_dotenv()
 from models.user import User
 from models.vendors import Vendor
 from models.Buyer import Buyer, Dashboard
-from models.RFQ import RFQ
+from models.RFQ import RFQ, RFQStatus
 from models.SavedVendor import SavedVendor
 from models.RecentSearch import RecentSearch
 
+from models.quote import Quote
+from models.product import Product
+from models.category import ProductCategory, CertificationType
+from models.Document import DocumentDB
+from models.PricingPlan import PricingPlan
+from models.Subscription import Subscription
+
 # ============================================================
-# EXISTING ROUTES
+# EXISTING / AI / COMMUNICATION ROUTES
 # ============================================================
 
+from routes.messageRoutes import router as message_router
+from routes.riskRoutes import router as risk_router
 from routes.pdfRoutes import router as pdf_router
 from routes.orderRoutes import router as order_router
 from routes.documentRoutes import router as doc_router
 from routes.reviewRoutes import router as review_router
 from routes.adminReviewRoutes import router as admin_router
+from routes.fraudRoutes import router as fraud_router
+from routes.negotiationRoutes import router as negotiation_router
+from routes.integrationsRoutes import router as integrations_router
 from routes.aiRoutes import router as ai_router
+
 
 # ============================================================
 # BUYER / RFQ / PRICING ROUTES
@@ -36,6 +50,7 @@ from routes.dashboardRoutes import router as dashboard_router
 from routes.rfqRoutes import router as rfq_router
 from routes.pricingRoutes import router as pricing_router
 from routes.adminPlanRoutes import router as admin_plan_router
+
 
 # ============================================================
 # VENDOR / PRODUCT ROUTES
@@ -49,6 +64,7 @@ from routes import (
     auth_routes,
 )
 
+
 # ============================================================
 # APP
 # ============================================================
@@ -58,6 +74,7 @@ app = FastAPI(
     description="B2B Procurement Platform with AI",
     version="1.0.0",
 )
+
 
 # ============================================================
 # CORS
@@ -74,34 +91,61 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # ============================================================
 # INCLUDE ROUTERS
 # ============================================================
 
+# ------------------------------------------------------------
 # Buyer Dashboard / RFQ / Pricing
+# ------------------------------------------------------------
+
 app.include_router(dashboard_router)
 app.include_router(rfq_router)
 app.include_router(pricing_router)
 app.include_router(admin_plan_router)
 
-# Existing project routes
+
+# ------------------------------------------------------------
+# Messaging / Risk / Fraud / Negotiation / Integrations
+# ------------------------------------------------------------
+
+app.include_router(message_router)
+app.include_router(risk_router)
+app.include_router(fraud_router)
+app.include_router(negotiation_router)
+app.include_router(integrations_router)
+
+
+# ------------------------------------------------------------
+# Existing Project Routes
+# ------------------------------------------------------------
+
 app.include_router(pdf_router)
 app.include_router(order_router)
 app.include_router(doc_router)
 app.include_router(review_router)
 app.include_router(admin_router)
 
-# Vendor/Product branch routes
-# Uncomment auth if this route is required by the project.
-# app.include_router(auth_routes.router)
+
+# ------------------------------------------------------------
+# Vendor / Product / Quote / Category
+# ------------------------------------------------------------
 
 app.include_router(vendor_routes.router)
 app.include_router(product_routes.router)
 app.include_router(quote_routes.router)
 app.include_router(category_routes.router)
 app.include_router(category_routes.cert_router)
+
+
+# ------------------------------------------------------------
+# AI
+# ------------------------------------------------------------
+
 app.include_router(ai_router)
 
+app.include_router(auth_routes.router)
 # ============================================================
 # ROOT
 # ============================================================

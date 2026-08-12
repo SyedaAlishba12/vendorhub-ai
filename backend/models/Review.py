@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Text, Integer, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
-from database.connection import Base
+from database.base import Base
 
 # Relationship string validation fix ke liye
 import models.Rating 

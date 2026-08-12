@@ -1,11 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import {
-  Sparkles,
   Search,
   Bell,
   User,
@@ -22,224 +21,280 @@ import {
   BarChart3,
   Settings,
   CreditCard,
-} from 'lucide-react';
+  LogOut,
+} from "lucide-react";
 
-import './globals.css';
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+
+import "./globals.css";
 
 const menuItems = [
   {
-    label: 'Buyer Dashboard',
+    label: "Buyer Dashboard",
     icon: LayoutDashboard,
-    href: '/',
+    href: "/",
   },
   {
-    label: 'AI Supplier Search',
+    label: "AI Supplier Search",
     icon: Search,
-    tag: 'AI',
-    href: '/vendors',
+    tag: "AI",
+    href: "/vendors",
   },
   {
-    label: 'Vendor Directory',
+    label: "Vendor Directory",
     icon: Store,
-    href: '/vendors',
+    href: "/vendors",
   },
   {
-    label: 'Product Catalog',
+    label: "Product Catalog",
     icon: PackageCheck,
-    href: '/products',
+    href: "/products",
   },
   {
-    label: 'RFQs',
+    label: "RFQs",
     icon: FileText,
-    href: '/rfq',
+    href: "/rfq",
   },
   {
-    label: 'Quote Comparison',
+    label: "Quote Comparison",
     icon: FileText,
-    href: '/quotes',
+    href: "/quotes",
   },
   {
-    label: 'Order Management',
+    label: "Order Management",
     icon: ShoppingBag,
-    href: '/orders',
+    href: "/orders",
   },
   {
-    label: 'AI Assistant & Chat',
+    label: "AI Assistant & Chat",
     icon: MessageSquare,
-    href: '/messages',
+    href: "/messages",
   },
   {
-    label: 'Risk Analysis',
+    label: "Risk Analysis",
     icon: ShieldAlert,
-    tag: 'AI',
-    href: '/risk-analysis',
+    tag: "AI",
+    href: "/risk-analysis",
   },
   {
-    label: 'Smart Documents',
+    label: "Smart Documents",
     icon: FolderArchive,
-    href: '/documents',
+    href: "/documents",
   },
   {
-    label: 'Ratings & Reviews',
+    label: "Ratings & Reviews",
     icon: Star,
-    href: '/reviews',
+    href: "/reviews",
   },
   {
-    label: 'Platform Analytics',
+    id: "analytics",
+    label: "Platform Analytics",
     icon: BarChart3,
-    href: '/analytics',
+    href: "/analytics",
   },
   {
-    label: 'Pricing & Plans',
+    label: "Pricing & Plans",
     icon: CreditCard,
-    href: '/pricing',
+    href: "/pricing",
   },
 ];
+
+function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const { user, loading, logout } = useAuth();
+
+  const isAdmin = pathname?.startsWith("/admin");
+  const isLanding = pathname === "/landing";
+  const isAuthPage =
+    pathname === "/login" ||
+    pathname === "/signup";
+
+  // Admin, landing, login and signup pages
+  // should not show the dashboard UI.
+  if (isAdmin || isLanding || isAuthPage) {
+    return (
+      <div className="min-h-screen bg-slate-50 font-sans antialiased">
+        {children}
+      </div>
+    );
+  }
+
+  // Wait until AuthContext checks localStorage / /auth/me.
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-sm font-semibold text-slate-500">
+          Loading...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Header */}
+      <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
+        {/* Logo / Title */}
+        <div>
+          <h1 className="text-lg font-black text-slate-900">
+            VendorHub AI
+          </h1>
+
+          <p className="text-[10px] text-slate-400 font-medium">
+            Find the Right Supplier. Faster. Smarter.
+          </p>
+        </div>
+
+        {/* Search */}
+        <div className="hidden md:flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-1.5 w-80">
+          <Search className="h-4 w-4 text-slate-400" />
+
+          <input
+            type="text"
+            placeholder="Ask AI: e.g. ISO Steel Mfr in Turkey..."
+            className="bg-transparent text-xs text-slate-700 outline-none w-full placeholder:text-slate-400 font-medium"
+          />
+        </div>
+
+        {/* User Section */}
+        <div className="flex items-center gap-3">
+          {/* Notifications */}
+          <button
+            type="button"
+            className="relative p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl"
+          >
+            <Bell className="h-5 w-5" />
+
+            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-indigo-600 ring-2 ring-white" />
+          </button>
+
+          {/* User Info */}
+          <div className="flex items-center gap-2.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+            {/* User Icon */}
+            <div className="bg-indigo-600 text-white p-1.5 rounded-lg font-bold text-xs flex items-center justify-center">
+              <User className="h-4 w-4" />
+            </div>
+
+            {/* Name + Role */}
+            <div className="text-left hidden sm:block pr-2">
+              <div className="flex items-center gap-1">
+                <p className="text-xs font-bold text-slate-900 leading-none">
+                  {user?.name || "User"}
+                </p>
+
+                <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
+              </div>
+
+              <p className="text-[10px] text-indigo-600 font-semibold mt-0.5 leading-none capitalize">
+                {user?.role || "User"}
+              </p>
+            </div>
+          </div>
+
+          {/* Logout Button */}
+          <button
+            type="button"
+            onClick={logout}
+            title="Logout"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+
+            <span className="hidden sm:inline">
+              Logout
+            </span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main Layout */}
+      <div className="flex min-h-[calc(100vh-4rem)]">
+        {/* Sidebar */}
+        <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-4 shrink-0 hidden lg:flex text-slate-700">
+          <div className="space-y-6">
+            <div>
+              <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Platform Modules
+              </p>
+
+              <nav className="space-y-1">
+                {menuItems.map((item, idx) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+
+                  return (
+                    <Link
+                      key={idx}
+                      href={item.href}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                        isActive
+                          ? "bg-indigo-50 text-indigo-600 font-bold border border-indigo-100 shadow-sm"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Icon
+                          className={`h-4 w-4 ${
+                            isActive
+                              ? "text-indigo-600"
+                              : "text-slate-400"
+                          }`}
+                        />
+
+                        <span>{item.label}</span>
+                      </div>
+
+                      {item.tag && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-indigo-100 text-indigo-700">
+                          {item.tag}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
+
+          {/* Settings */}
+          <div className="border-t border-slate-200 pt-3">
+            <Link
+              href="/settings"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            >
+              <Settings className="h-4 w-4 text-slate-400" />
+
+              <span>System Settings</span>
+            </Link>
+          </div>
+        </aside>
+
+        {/* Page Content */}
+        <main className="flex-1 p-6 bg-slate-50 overflow-x-hidden">
+          {children}
+        </main>
+      </div>
+    </>
+  );
+}
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-
-  const isAdmin = pathname?.startsWith('/admin');
-  const isLanding = pathname === '/landing';
-
-  // Admin and landing pages do not use the dashboard layout
-  if (isAdmin || isLanding) {
-    return (
-      <html lang="en">
-        <body className="min-h-screen bg-slate-50 font-sans antialiased">
-          {children}
-        </body>
-      </html>
-    );
-  }
-
   return (
     <html lang="en">
       <body className="bg-slate-50 text-slate-900">
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
-          <div>
-            <h1 className="text-lg font-black text-slate-900">
-              VendorHub AI
-            </h1>
-
-            <p className="text-[10px] text-slate-400 font-medium">
-              Find the Right Supplier. Faster. Smarter.
-            </p>
-          </div>
-
-          {/* Search */}
-          <div className="hidden md:flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-1.5 w-80">
-            <Search className="h-4 w-4 text-slate-400" />
-
-            <input
-              type="text"
-              placeholder="Ask AI: e.g. ISO Steel Mfr in Turkey..."
-              className="bg-transparent text-xs text-slate-700 outline-none w-full placeholder:text-slate-400 font-medium"
-            />
-          </div>
-
-          {/* User Section */}
-          <div className="flex items-center gap-3">
-            <button className="relative p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
-              <Bell className="h-5 w-5" />
-
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-indigo-600 ring-2 ring-white" />
-            </button>
-
-            <div className="flex items-center gap-2.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-              <div className="bg-indigo-600 text-white p-1.5 rounded-lg font-bold text-xs flex items-center justify-center">
-                <User className="h-4 w-4" />
-              </div>
-
-              <div className="text-left hidden sm:block pr-2">
-                <div className="flex items-center gap-1">
-                  <p className="text-xs font-bold text-slate-900 leading-none">
-                    Zainab Bibi
-                  </p>
-
-                  <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
-                </div>
-
-                <p className="text-[10px] text-indigo-600 font-semibold mt-0.5 leading-none">
-                  Buyer
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Layout */}
-        <div className="flex min-h-[calc(100vh-4rem)]">
-          {/* Sidebar */}
-          <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-4 shrink-0 hidden lg:flex text-slate-700">
-            <div className="space-y-6">
-              <div>
-                <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Platform Modules
-                </p>
-
-                <nav className="space-y-1">
-                  {menuItems.map((item, idx) => {
-                    const Icon = item.icon;
-                    const isActive = pathname === item.href;
-
-                    return (
-                      <Link
-                        key={idx}
-                        href={item.href}
-                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                          isActive
-                            ? 'bg-indigo-50 text-indigo-600 font-bold border border-indigo-100 shadow-sm'
-                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Icon
-                            className={`h-4 w-4 ${
-                              isActive
-                                ? 'text-indigo-600'
-                                : 'text-slate-400'
-                            }`}
-                          />
-
-                          <span>{item.label}</span>
-                        </div>
-
-                        {item.tag && (
-                          <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-indigo-100 text-indigo-700">
-                            {item.tag}
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </nav>
-              </div>
-            </div>
-
-            {/* Settings */}
-            <div className="border-t border-slate-200 pt-3">
-              <Link
-                href="/settings"
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-              >
-                <Settings className="h-4 w-4 text-slate-400" />
-
-                <span>System Settings</span>
-              </Link>
-            </div>
-          </aside>
-
-          {/* Page Content */}
-          <main className="flex-1 p-6 bg-slate-50 overflow-x-hidden">
+        <AuthProvider>
+          <DashboardLayout>
             {children}
-          </main>
-        </div>
+          </DashboardLayout>
+        </AuthProvider>
       </body>
     </html>
   );

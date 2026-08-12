@@ -1,7 +1,7 @@
 import asyncio
 from sqlalchemy import delete
 from database.connection import AsyncSessionLocal, engine
-from models.base import Base
+from database.base import Base
 from models.vendors import Vendor
 from models.product import Product
 from models.quote import Quote

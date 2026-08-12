@@ -93,6 +93,7 @@ export default function Signup() {
                 type="password"
                 required
                 minLength={6}
+                maxLength={32}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 6 characters"

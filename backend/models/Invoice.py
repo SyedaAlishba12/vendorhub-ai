@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey
 from datetime import datetime
-from database.connection import Base
+from database.base import Base
 
 class Invoice(Base):
     __tablename__ = "invoices"

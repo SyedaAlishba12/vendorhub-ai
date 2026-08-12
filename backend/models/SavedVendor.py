@@ -1,8 +1,9 @@
+from datetime import datetime
 from sqlalchemy import Column, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from database.base import Base
 
-from models.base import Base
+from database.base import Base
 
 
 class SavedVendor(Base):

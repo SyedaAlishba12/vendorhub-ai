@@ -10,8 +10,7 @@ from sqlalchemy import (
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
-from models.base import Base
-
+from database.base import Base
 
 class Product(Base):
     __tablename__ = "products"

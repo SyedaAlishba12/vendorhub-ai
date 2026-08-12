@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, String, Float, DateTime, Text
-from database.connection import Base  # Apne connection path ke hisab se update kar lein
+from database.base import Base
 
 # 1. SQLAlchemy Model (Database Table Structure)
 class DocumentDB(Base):

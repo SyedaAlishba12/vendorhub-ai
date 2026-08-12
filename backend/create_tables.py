@@ -1,7 +1,7 @@
 import asyncio
 
 from database.connection import engine
-from models.base import Base
+from database.base import Base
 
 # Import models so SQLAlchemy registers their tables
 from models.user import User

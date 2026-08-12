@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.orm import relationship
-from database.connection import Base
+from database.base import Base
 
 class Shipment(Base):
     __tablename__ = "shipments"

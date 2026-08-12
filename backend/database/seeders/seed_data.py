@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from database.connection import AsyncSessionLocal, engine
-from models.base import Base
+from database.base import Base
 
 # Ensure models are registered with SQLAlchemy
 from models.user import User  # noqa: F401
