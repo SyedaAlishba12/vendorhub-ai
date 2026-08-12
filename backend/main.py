@@ -50,6 +50,8 @@ from routes.dashboardRoutes import router as dashboard_router
 from routes.rfqRoutes import router as rfq_router
 from routes.pricingRoutes import router as pricing_router
 from routes.adminPlanRoutes import router as admin_plan_router
+from routes.paymentRoutes import router as payment_router
+from routes.mapsRoutes import router as maps_router
 
 
 # ============================================================
@@ -115,6 +117,9 @@ app.include_router(risk_router)
 app.include_router(fraud_router)
 app.include_router(negotiation_router)
 app.include_router(integrations_router)
+app.include_router(payment_router)
+app.include_router(maps_router)
+
 
 
 # ------------------------------------------------------------

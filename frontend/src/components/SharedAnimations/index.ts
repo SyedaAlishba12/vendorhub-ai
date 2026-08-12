@@ -19,6 +19,18 @@ export type { ModalProps } from './Modal';
 export { PageTransition } from './PageTransition';
 export type { PageTransitionProps } from './PageTransition';
 
+export { ConfirmationDialog } from './ConfirmationDialog';
+export type { ConfirmationDialogProps } from './ConfirmationDialog';
+
+export { FadeIn } from './FadeIn';
+export type { FadeInProps } from './FadeIn';
+
+export { ScrollReveal } from './ScrollReveal';
+export type { ScrollRevealProps } from './ScrollReveal';
+
+export { ProgressBar } from './ProgressBar';
+export type { ProgressBarProps } from './ProgressBar';
+
 // Hover effect constants
 export {
   cardHover,

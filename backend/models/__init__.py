@@ -35,5 +35,6 @@ from models.ReviewReport import ReviewReportDB
 from models.RiskReport import RiskReport
 
 from models.Shipment import Shipment
+from models.PaymentLog import PaymentLog
 
 # models package marker
