@@ -6,7 +6,7 @@ from controllers.dashboardController import DashboardController
 from services.dashboardService import DashboardService
 from common.middleware.authMiddleware import get_current_user
 from models.RecentSearch import RecentSearch
-
+from models.user import User
 
 router = APIRouter(
     prefix="/api/dashboard",

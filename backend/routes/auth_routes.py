@@ -228,15 +228,17 @@ async def update_profile(
         )
 
     except Exception as e:
-        print(
-            f"Update profile error: {e}"
-        )
+        import traceback
+
+        print("========== UPDATE PROFILE ERROR ==========")
+        print(str(e))
+        traceback.print_exc()
+        print("==========================================")
 
         raise HTTPException(
             status_code=500,
-            detail="Failed to update profile.",
+            detail=str(e),   # temporary: show actual error
         )
-
 
 # ============================================================
 # FORGOT PASSWORD
@@ -385,11 +387,14 @@ async def delete_account(
         )
 
     except Exception as e:
-        print(
-            f"Account deletion error: {e}"
-        )
+        import traceback
+
+        print("========== ACCOUNT DELETE ERROR ==========")
+        print(e)
+        traceback.print_exc()
+        print("==========================================")
 
         raise HTTPException(
-            status_code=500,
-            detail="Failed to delete account.",
-        )
+           status_code=500,
+           detail=str(e),
+    )

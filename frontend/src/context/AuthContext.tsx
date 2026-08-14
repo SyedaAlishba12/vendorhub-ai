@@ -24,12 +24,12 @@ interface User {
   is_active?: boolean;
   email_verified?: boolean;
   two_factor_enabled?: boolean;
-
 }
 
 interface AuthResult {
   success: boolean;
   error?: string;
+  user?: User;
 }
 
 interface AuthContextType {
@@ -57,6 +57,7 @@ interface AuthContextType {
   verifyAndLogin: (
     token: string
   ) => Promise<AuthResult>;
+
   updateProfile: (
     data: {
       name?: string;
@@ -108,7 +109,7 @@ export const REMEMBER_KEY =
 // GET STORED TOKEN
 // =======================================
 
- export const getStoredToken = (): string | null => {
+export const getStoredToken = (): string | null => {
   if (typeof window === "undefined") {
     return null;
   }
@@ -142,8 +143,7 @@ const storeToken = (
     return;
   }
 
-  // Always clear both storages first.
-
+  // Clear both storages first.
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REMEMBER_KEY);
 
@@ -151,7 +151,6 @@ const storeToken = (
   sessionStorage.removeItem(REMEMBER_KEY);
 
   if (rememberMe) {
-    // Remember Me ON
     localStorage.setItem(
       TOKEN_KEY,
       token
@@ -166,7 +165,6 @@ const storeToken = (
       "Token stored in LOCAL STORAGE"
     );
   } else {
-    // Remember Me OFF
     sessionStorage.setItem(
       TOKEN_KEY,
       token
@@ -235,6 +233,11 @@ export function AuthProvider({
           }
         );
 
+      console.log(
+        "Current authenticated user:",
+        res.data
+      );
+
       setUser(res.data);
     } catch (error: any) {
       console.error(
@@ -242,7 +245,6 @@ export function AuthProvider({
         error
       );
 
-      // Invalid/expired JWT.
       clearStoredToken();
       setUser(null);
     } finally {
@@ -281,60 +283,58 @@ export function AuthProvider({
         return {
           success: false,
           error:
-            error.response?.data
-              ?.detail ||
-            error.response?.data
-              ?.message ||
+            error.response?.data?.detail ||
+            error.response?.data?.message ||
             "Failed to resend verification email.",
         };
       }
     };
 
+  // =====================================
+  // VERIFY EMAIL AND LOGIN
+  // =====================================
+
   const verifyAndLogin = async (
     token: string
   ): Promise<AuthResult> => {
     try {
-      const response = await apiClient.get(
-        "/auth/verify-email",
-        {
-          params: { token },
-        }
-      );
+      const response =
+        await apiClient.get(
+          "/auth/verify-email",
+          {
+            params: { token },
+          }
+        );
 
       const data = response.data;
 
-      if (!data?.access_token || !data?.user) {
+      if (
+        !data?.access_token ||
+        !data?.user
+      ) {
         return {
           success: false,
-          error: "Invalid verification response.",
+          error:
+            "Invalid verification response.",
         };
       }
 
-      // Store verified user's JWT.
-      // Verification is effectively a login, so remember it
-      // for the current browser session.
       storeToken(
         data.access_token,
         true
       );
 
-    setUser(data.user);
+      setUser(data.user);
 
-if (data.user.role === "buyer") {
-  router.push("/");
-}
+      console.log(
+        "Verified user:",
+        data.user
+      );
 
-if (data.user.role === "vendor") {
-  router.push("/vendor");
-}
-
-if (data.user.role === "admin") {
-  router.push("/admin");
-}
-
-return {
-  success: true,
-};
+      return {
+        success: true,
+        user: data.user,
+      };
     } catch (error: any) {
       console.error(
         "Email verification error:",
@@ -386,6 +386,11 @@ return {
 
       const data = res.data;
 
+      console.log(
+        "LOGIN RESPONSE:",
+        data
+      );
+
       // ---------------------------------
       // Validate server response
       // ---------------------------------
@@ -411,13 +416,26 @@ return {
       );
 
       // ---------------------------------
-      // Set logged-in user
+      // Update AuthContext state
       // ---------------------------------
 
       setUser(data.user);
 
+      console.log(
+        "LOGIN USER:",
+        data.user
+      );
+
+      // ---------------------------------
+      // IMPORTANT:
+      // Return the user immediately.
+      // Login.tsx should use result.user
+      // instead of waiting for React state.
+      // ---------------------------------
+
       return {
         success: true,
+        user: data.user,
       };
     } catch (error: any) {
       console.error(
@@ -428,8 +446,6 @@ return {
       const detail =
         error.response?.data?.detail;
 
-      // FastAPI can return a string
-      // directly in detail.
       if (typeof detail === "string") {
         return {
           success: false,
@@ -440,8 +456,7 @@ return {
       return {
         success: false,
         error:
-          error.response?.data
-            ?.message ||
+          error.response?.data?.message ||
           "Unable to login. Please check your email and password.",
       };
     }
@@ -479,18 +494,15 @@ return {
         };
       }
 
-      // ---------------------------------
-      // IMPORTANT:
       // Signup does NOT log the user in.
       // User must verify email first.
-      // ---------------------------------
 
       clearStoredToken();
-
       setUser(null);
 
       return {
         success: true,
+        user: data.user,
       };
     } catch (error: any) {
       console.error(
@@ -511,13 +523,13 @@ return {
       return {
         success: false,
         error:
-          error.response?.data
-            ?.message ||
+          error.response?.data?.message ||
           "Signup failed.",
       };
     }
   };
-    // =====================================
+
+  // =====================================
   // UPDATE PROFILE
   // =====================================
 
@@ -529,17 +541,18 @@ return {
     }
   ): Promise<AuthResult> => {
     try {
-      const res = await apiClient.put(
-        "/auth/profile",
-        data
-      );
+      const res =
+        await apiClient.put(
+          "/auth/profile",
+          data
+        );
 
       setUser(res.data);
 
       return {
         success: true,
+        user: res.data,
       };
-
     } catch (error: any) {
       console.error(
         "Update profile error:",
@@ -554,65 +567,32 @@ return {
       };
     }
   };
-    // =====================================
-// CHANGE PASSWORD
-// =====================================
 
-const changePassword = async (
-  currentPassword: string,
-  newPassword: string
-): Promise<AuthResult> => {
-  try {
-    await apiClient.put(
-      "/auth/change-password",
-      {
-        current_password: currentPassword,
-        new_password: newPassword,
-      }
-    );
-
-    return {
-      success: true,
-    };
-  } catch (error: any) {
-    console.error(
-      "Change password error:",
-      error
-    );
-
-    return {
-      success: false,
-      error:
-        error.response?.data?.detail ||
-        "Failed to change password.",
-    };
-  }
-};
-    // =====================================
-  // DEACTIVATE ACCOUNT
+  // =====================================
+  // CHANGE PASSWORD
   // =====================================
 
-  const deactivateAccount = async (
-    password: string
+  const changePassword = async (
+    currentPassword: string,
+    newPassword: string
   ): Promise<AuthResult> => {
     try {
-      await apiClient.post(
-        "/auth/deactivate",
+      await apiClient.put(
+        "/auth/change-password",
         {
-          password,
+          current_password:
+            currentPassword,
+          new_password:
+            newPassword,
         }
       );
-
-      clearStoredToken();
-      setUser(null);
 
       return {
         success: true,
       };
-
     } catch (error: any) {
       console.error(
-        "Deactivate account error:",
+        "Change password error:",
         error
       );
 
@@ -620,11 +600,49 @@ const changePassword = async (
         success: false,
         error:
           error.response?.data?.detail ||
-          "Failed to deactivate account.",
+          "Failed to change password.",
       };
     }
   };
-    // =====================================
+
+  // =====================================
+  // DEACTIVATE ACCOUNT
+  // =====================================
+
+  const deactivateAccount =
+    async (
+      password: string
+    ): Promise<AuthResult> => {
+      try {
+        await apiClient.post(
+          "/auth/deactivate",
+          {
+            password,
+          }
+        );
+
+        clearStoredToken();
+        setUser(null);
+
+        return {
+          success: true,
+        };
+      } catch (error: any) {
+        console.error(
+          "Deactivate account error:",
+          error
+        );
+
+        return {
+          success: false,
+          error:
+            error.response?.data?.detail ||
+            "Failed to deactivate account.",
+        };
+      }
+    };
+
+  // =====================================
   // DELETE ACCOUNT
   // =====================================
 
@@ -647,7 +665,6 @@ const changePassword = async (
       return {
         success: true,
       };
-
     } catch (error: any) {
       console.error(
         "Delete account error:",
@@ -697,15 +714,22 @@ const changePassword = async (
 
   const hasRole = (
     ...roles: string[]
-  ) => {
-    if (!user) {
+  ): boolean => {
+    if (!user?.role) {
       return false;
     }
 
+    const currentRole =
+      user.role
+        .trim()
+        .toLowerCase();
+
     return roles.some(
       (role) =>
-        role.toLowerCase() ===
-        user.role.toLowerCase()
+        role
+          .trim()
+          .toLowerCase() ===
+        currentRole
     );
   };
 
@@ -714,23 +738,23 @@ const changePassword = async (
   // =====================================
 
   return (
-<AuthContext.Provider
-  value={{
-    user,
-    loading,
-    login,
-    signup,
-    resendVerificationEmail,
-    verifyAndLogin,
-    updateProfile,
-    changePassword,
-    deactivateAccount,
-    deleteAccount,
-    logout,
-    refreshUser,
-    hasRole,
-  }}
->
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        signup,
+        resendVerificationEmail,
+        verifyAndLogin,
+        updateProfile,
+        changePassword,
+        deactivateAccount,
+        deleteAccount,
+        logout,
+        refreshUser,
+        hasRole,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

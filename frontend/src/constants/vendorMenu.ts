@@ -30,11 +30,7 @@ export const vendorMenu = [
     icon: ShoppingBag,
     href: "/vendor/orders",
   },
-  {
-    label: "Messages",
-    icon: MessageSquare,
-    href: "/vendor/messages",
-  },
+
   {
     label: "Reviews",
     icon: Star,

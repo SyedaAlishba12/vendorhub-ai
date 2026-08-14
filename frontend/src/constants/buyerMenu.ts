@@ -17,7 +17,7 @@ export const buyerMenu = [
   {
     label: "Buyer Dashboard",
     icon: LayoutDashboard,
-    href: "/",
+    href: "/dashboard",
   },
   {
     label: "AI Supplier Search",

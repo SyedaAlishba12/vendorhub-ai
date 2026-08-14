@@ -19,10 +19,10 @@ import {
 import { useAuth } from "@/context/AuthContext";
 
 export default function Login() {
-  const {
-    login,
-    resendVerificationEmail,
-  } = useAuth();
+const {
+  login,
+  resendVerificationEmail,
+} = useAuth();
 
   const router = useRouter();
 
@@ -90,16 +90,29 @@ export default function Login() {
       );
 
       if (result.success) {
-        setSuccess(
-          "Login successful! Redirecting..."
-        );
+  setSuccess(
+    "Login successful! Redirecting..."
+  );
 
-        setTimeout(() => {
-          router.push("/");
-        }, 2000);
+  setTimeout(() => {
+    if (result.user?.role === "buyer") {
+      router.push("/dashboard");
+    } else if (
+      result.user?.role === "vendor"
+    ) {
+      router.push("/vendor");
+    } else if (
+      result.user?.role === "admin"
+    ) {
+      router.push("/admin");
+    } else {
+      router.push("/");
+    }
+  }, 1000);
 
-        return;
-      }
+  return;
+
+}
 
       const errorMessage =
         result.error || "Login failed.";

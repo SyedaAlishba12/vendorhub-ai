@@ -20,8 +20,7 @@ export default function ResetPasswordPage() {
 
   const [token, setToken] = useState("");
 
-  const [password, setPassword] =
-    useState("");
+  const [password, setPassword] = useState("");
 
   const [confirmPassword, setConfirmPassword] =
     useState("");
@@ -32,21 +31,26 @@ export default function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [success, setSuccess] =
-    useState("");
+  const [success, setSuccess] = useState("");
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
+
+  /* =========================================================
+     GET RESET TOKEN FROM URL
+  ========================================================= */
 
   useEffect(() => {
-    const resetToken =
-      searchParams.get("token");
+    if (!searchParams) {
+      return;
+    }
+
+    const resetToken = searchParams.get("token");
 
     if (resetToken) {
       setToken(resetToken);
+      setError("");
     } else {
       setError(
         "Invalid or missing password reset token."
@@ -54,13 +58,21 @@ export default function ResetPasswordPage() {
     }
   }, [searchParams]);
 
+  /* =========================================================
+     HANDLE PASSWORD RESET
+  ========================================================= */
+
   const handleSubmit = async (
-    e: React.FormEvent
+    e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
 
     setError("");
     setSuccess("");
+
+    /* ---------------------------------------------------------
+       VALIDATE TOKEN
+    --------------------------------------------------------- */
 
     if (!token) {
       setError(
@@ -69,12 +81,20 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    /* ---------------------------------------------------------
+       VALIDATE PASSWORD LENGTH
+    --------------------------------------------------------- */
+
     if (password.length < 8) {
       setError(
         "Password must be at least 8 characters long."
       );
       return;
     }
+
+    /* ---------------------------------------------------------
+       VALIDATE PASSWORD MATCH
+    --------------------------------------------------------- */
 
     if (password !== confirmPassword) {
       setError(
@@ -83,22 +103,34 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response =
-        await apiClient.post(
-          "/auth/reset-password",
-          {
-            token,
-            new_password: password,
-          }
-        );
+      setLoading(true);
+
+      /* -------------------------------------------------------
+         RESET PASSWORD API
+      ------------------------------------------------------- */
+
+      const response = await apiClient.post(
+        "/auth/reset-password",
+        {
+          token,
+          new_password: password,
+        }
+      );
+
+      console.log(
+        "Password reset response:",
+        response.data
+      );
 
       setSuccess(
         response.data?.message ||
           "Password reset successfully."
       );
+
+      /* -------------------------------------------------------
+         CLEAR PASSWORD FIELDS
+      ------------------------------------------------------- */
 
       setPassword("");
       setConfirmPassword("");
@@ -110,32 +142,47 @@ export default function ResetPasswordPage() {
       );
 
       setError(
-        err.response?.data?.detail ||
+        err?.response?.data?.detail ||
+          err?.response?.data?.message ||
           "Unable to reset your password."
       );
-
     } finally {
       setLoading(false);
     }
   };
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans px-4 py-8">
 
       <div className="w-full max-w-sm bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
 
+        {/* =====================================================
+            BACK TO LOGIN
+        ===================================================== */}
+
         <Link
           href="/login"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
+
           Back to Login
         </Link>
+
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
 
         <div className="flex flex-col items-center text-center gap-2">
 
           <div className="bg-indigo-600 p-2.5 rounded-xl text-white shadow-md shadow-indigo-200">
+
             <Lock className="h-6 w-6" />
+
           </div>
 
           <h1 className="font-black text-slate-900 text-lg tracking-tight">
@@ -148,19 +195,37 @@ export default function ResetPasswordPage() {
 
         </div>
 
+        {/* =====================================================
+            ERROR MESSAGE
+        ===================================================== */}
+
         {error && (
           <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-xs font-semibold flex gap-2">
+
             <XCircle className="h-4 w-4 shrink-0" />
+
             <span>{error}</span>
+
           </div>
         )}
 
+        {/* =====================================================
+            SUCCESS MESSAGE
+        ===================================================== */}
+
         {success && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-3 rounded-xl text-xs font-semibold flex gap-2">
+
             <CheckCircle className="h-4 w-4 shrink-0" />
+
             <span>{success}</span>
+
           </div>
         )}
+
+        {/* =====================================================
+            RESET PASSWORD FORM
+        ===================================================== */}
 
         {!success && (
           <form
@@ -168,7 +233,9 @@ export default function ResetPasswordPage() {
             className="space-y-4"
           >
 
-            {/* NEW PASSWORD */}
+            {/* =================================================
+                NEW PASSWORD
+            ================================================= */}
 
             <div>
 
@@ -187,6 +254,7 @@ export default function ResetPasswordPage() {
                       : "password"
                   }
                   required
+                  minLength={8}
                   value={password}
                   onChange={(e) =>
                     setPassword(
@@ -205,6 +273,11 @@ export default function ResetPasswordPage() {
                     )
                   }
                   className="text-slate-400 hover:text-slate-600"
+                  aria-label={
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -217,7 +290,9 @@ export default function ResetPasswordPage() {
 
             </div>
 
-            {/* CONFIRM PASSWORD */}
+            {/* =================================================
+                CONFIRM PASSWORD
+            ================================================= */}
 
             <div>
 
@@ -236,6 +311,7 @@ export default function ResetPasswordPage() {
                       : "password"
                   }
                   required
+                  minLength={8}
                   value={confirmPassword}
                   onChange={(e) =>
                     setConfirmPassword(
@@ -254,6 +330,11 @@ export default function ResetPasswordPage() {
                     )
                   }
                   className="text-slate-400 hover:text-slate-600"
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide confirm password"
+                      : "Show confirm password"
+                  }
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -266,9 +347,13 @@ export default function ResetPasswordPage() {
 
             </div>
 
+            {/* =================================================
+                SUBMIT BUTTON
+            ================================================= */}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !token}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl py-2.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading
@@ -278,6 +363,10 @@ export default function ResetPasswordPage() {
 
           </form>
         )}
+
+        {/* =====================================================
+            LOGIN BUTTON AFTER SUCCESS
+        ===================================================== */}
 
         {success && (
           <Link

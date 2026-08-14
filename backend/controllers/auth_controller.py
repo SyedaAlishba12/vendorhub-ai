@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 
 from models.user import User
 from schemas.auth import UserSignup
-
+from models.Buyer import Buyer
+from models.vendors import Vendor
 
 from services.auth import (
     hash_password,
@@ -80,11 +81,65 @@ async def signup_user(db: AsyncSession, data: UserSignup):
 
     db.add(new_user)
 
+    # Generate the user ID before creating the profile
+    await db.flush()
+
+    # =========================================================
+    # CREATE BUYER PROFILE
+    # =========================================================
+
+    if data.role.lower() == "buyer":
+
+        buyer = Buyer(
+            user_id=new_user.id,
+            company_name=f"{new_user.name}'s Company",
+            company_size=None,
+            industry="General",
+            country="Pakistan",
+            total_spending=0.0,
+        )
+
+        db.add(buyer)
+
+    # =========================================================
+    # CREATE VENDOR PROFILE
+    # =========================================================
+
+    elif data.role.lower() == "vendor":
+
+        vendor = Vendor(
+            user_id=new_user.id,
+            company_name=f"{new_user.name}'s Company",
+            business_description=None,
+            country="Pakistan",
+            industry="General",
+            certification=None,
+            production_capacity=None,
+            export_countries=None,
+            contact_email=new_user.email,
+            contact_phone=None,
+            languages=None,
+            rating=0.0,
+            response_time_hours=None,
+            is_verified=False,
+            is_hidden=False,
+            is_featured=False,
+        )
+
+        db.add(vendor)
+
+    # =========================================================
+    # COMMIT USER + PROFILE
+    # =========================================================
+
     await db.commit()
+
     await db.refresh(new_user)
 
     # Send verification email
-    print(f"📧 Sending verification email to {new_user.email}...")
+    print(
+        f"📧 Sending verification email to {new_user.email}..."
+    )
 
     await send_verification_email(
         to_email=new_user.email,
@@ -94,6 +149,7 @@ async def signup_user(db: AsyncSession, data: UserSignup):
     print("✅ Verification email sent successfully.")
 
     return new_user
+
 async def resend_verification_email(
     db: AsyncSession,
     email: str,
@@ -237,6 +293,16 @@ async def update_user_profile(
     email: str | None = None,
     phone: str | None = None,
 ):
+    # Re-fetch user in the current DB session
+    result = await db.execute(
+        select(User).where(User.id == user.id)
+    )
+
+    user = result.scalars().first()
+
+    if not user:
+        raise ValueError("User not found.")
+
     if name is not None:
         name = name.strip()
 
@@ -250,7 +316,6 @@ async def update_user_profile(
     if email is not None:
         email = email.strip().lower()
 
-        # Only check if email actually changed
         if email != user.email.lower():
 
             existing = await get_user_by_email(
@@ -282,11 +347,10 @@ async def update_user_profile(
         user.phone = phone or None
 
     await db.commit()
+
     await db.refresh(user)
 
     return user
-
-
 # ============================================================
 # CHANGE PASSWORD
 # ============================================================
@@ -297,6 +361,17 @@ async def change_user_password(
     current_password: str,
     new_password: str,
 ):
+    # Re-fetch user using the current DB session
+    result = await db.execute(
+        select(User).where(User.id == user.id)
+    )
+
+    user = result.scalars().first()
+
+    if not user:
+        raise ValueError("User not found.")
+
+    # Verify current password
     if not verify_password(
         current_password,
         user.hashed_password,
@@ -305,16 +380,19 @@ async def change_user_password(
             "Current password is incorrect."
         )
 
+    # Make sure new password is different
     if current_password == new_password:
         raise ValueError(
             "New password must be different from your current password."
         )
 
+    # Password length validation
     if len(new_password) < 8:
         raise ValueError(
             "New password must be at least 8 characters long."
         )
 
+    # Hash and save new password
     user.hashed_password = hash_password(
         new_password
     )
@@ -322,8 +400,6 @@ async def change_user_password(
     await db.commit()
 
     return True
-
-
 # ============================================================
 # DEACTIVATE ACCOUNT
 # ============================================================
@@ -357,6 +433,19 @@ async def delete_user(
     user: User,
     password: str,
 ):
+    # Re-fetch the user using the current DB session
+    result = await db.execute(
+        select(User).where(User.id == user.id)
+    )
+
+    user = result.scalars().first()
+
+    if not user:
+        raise ValueError(
+            "User not found."
+        )
+
+    # Verify password
     if not verify_password(
         password,
         user.hashed_password,
@@ -365,6 +454,7 @@ async def delete_user(
             "Incorrect password."
         )
 
+    # Delete account
     await db.delete(user)
 
     await db.commit()

@@ -14,6 +14,10 @@ router = APIRouter(
 )
 
 
+# =========================================================
+# VENDOR RFQs
+# =========================================================
+
 @router.get("/rfqs")
 async def get_vendor_rfqs(
     db: AsyncSession = Depends(get_db),
@@ -34,4 +38,31 @@ async def get_vendor_rfqs(
         raise HTTPException(
             status_code=500,
             detail="Failed to fetch vendor RFQs"
+        )
+
+
+# =========================================================
+# VENDOR ANALYTICS
+# =========================================================
+
+@router.get("/analytics")
+async def get_vendor_analytics(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    try:
+        return await VendorDashboardController.get_vendor_analytics(
+            db,
+            current_user.id
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        print(f"Vendor analytics route error: {e}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch vendor analytics"
         )

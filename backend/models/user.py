@@ -85,16 +85,16 @@ class User(Base):
         server_default=func.now()
     )
 
-    # Buyer module relationship
     buyer_profile = relationship(
-        "Buyer",
-        back_populates="user",
-        uselist=False
+    "Buyer",
+    back_populates="user",
+    uselist=False,
+    cascade="all, delete-orphan",
     )
 
-    # Vendor module relationship
     vendor_profile = relationship(
-        "Vendor",
-        back_populates="user",
-        uselist=False
+    "Vendor",
+    back_populates="user",
+    uselist=False,
+    cascade="all, delete-orphan",
     )

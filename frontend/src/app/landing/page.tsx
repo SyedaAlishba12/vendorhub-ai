@@ -26,7 +26,7 @@ export default function LandingPage() {
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/landing" className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
             <div className="bg-indigo-600 text-white p-2 rounded-xl shadow-sm">
               <Sparkles className="h-5 w-5" />
             </div>

@@ -31,23 +31,25 @@ function DashboardLayout({
   const isAdmin = pathname?.startsWith("/admin");
   const isLanding = pathname === "/landing";
 
-  const isAuthPage =
-    pathname === "/login" ||
-    pathname === "/signup";
-
+const isAuthPage =
+  pathname === "/login" ||
+  pathname === "/signup" ||
+  pathname === "/forgot-password" ||
+  pathname === "/reset-password" ||
+  pathname === "/verify-email";
   /*
    * -------------------------------------------------------
    * PUBLIC / AUTH / ADMIN PAGES
    * -------------------------------------------------------
    */
 
-  if (isAdmin || isLanding || isAuthPage) {
-    return (
-      <div className="min-h-screen bg-slate-50 font-sans antialiased">
-        {children}
-      </div>
-    );
-  }
+ if (isAdmin || isLanding || isAuthPage) {
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans antialiased">
+      {children}
+    </div>
+  );
+}
 
   /*
    * -------------------------------------------------------

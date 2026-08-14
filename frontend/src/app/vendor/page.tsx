@@ -17,10 +17,8 @@ import {
   DollarSign,
   Users,
   BarChart3,
-  AlertCircle,
   Truck,
   XCircle,
-  Activity,
 } from "lucide-react";
 
 import { Card } from "@/components/UI/Card";
@@ -58,11 +56,50 @@ interface ActivityItem {
   type: "order" | "quote" | "product" | "message";
 }
 
+interface Review {
+  id: string | number;
+  vendor_id?: number | string;
+  buyer_id?: number | string;
+  buyer_name?: string;
+  comment?: string;
+  created_at?: string;
+
+  helpful_votes?: number;
+
+  ratings?: {
+    overall_rating?: number | null;
+    product_rating?: number | null;
+    communication_rating?: number | null;
+    delivery_rating?: number | null;
+    quality_rating?: number | null;
+    service_rating?: number | null;
+  } | null;
+
+  overall_rating?: number | null;
+  rating_overall?: number | null;
+}
+
+interface ReviewStatistics {
+  average_rating?: number | null;
+  avg_rating?: number | null;
+  overall_rating?: number | null;
+  rating?: number | null;
+  total_reviews?: number | null;
+  review_count?: number | null;
+  count?: number | null;
+}
+
 export default function VendorDashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
-
   const [productError, setProductError] = useState("");
+
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewError, setReviewError] = useState("");
+
+  const [reviewStatistics, setReviewStatistics] =
+    useState<ReviewStatistics | null>(null);
 
   const API_URL =
     process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
@@ -96,7 +133,7 @@ export default function VendorDashboardPage() {
       buyer: "Global Manufacturing Ltd.",
       deadline: "Sep 15, 2026",
       status: "New",
-      statusType: "new",
+      statusType: "new" as const,
     },
     {
       id: "RFQ-9017",
@@ -105,7 +142,7 @@ export default function VendorDashboardPage() {
       buyer: "PakTech Industries",
       deadline: "Oct 2, 2026",
       status: "Reviewing",
-      statusType: "reviewing",
+      statusType: "reviewing" as const,
     },
     {
       id: "RFQ-9012",
@@ -114,7 +151,7 @@ export default function VendorDashboardPage() {
       buyer: "Atlas Trading Co.",
       deadline: "Aug 28, 2026",
       status: "Urgent",
-      statusType: "urgent",
+      statusType: "urgent" as const,
     },
   ];
 
@@ -199,7 +236,13 @@ export default function VendorDashboardPage() {
           );
         }
 
-        setProducts(Array.isArray(data) ? data : []);
+        const productList = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+          ? data.data
+          : [];
+
+        setProducts(productList);
       } catch (error) {
         console.error("FETCH PRODUCTS ERROR:", error);
 
@@ -217,6 +260,134 @@ export default function VendorDashboardPage() {
   }, [API_URL]);
 
   // =========================================================
+  // FETCH VENDOR REVIEWS
+  // =========================================================
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setReviewsLoading(true);
+        setReviewError("");
+
+        const token = getStoredToken();
+
+        if (!token) {
+          setReviewError(
+            "Authentication token not found. Please login again."
+          );
+          setReviewsLoading(false);
+          return;
+        }
+
+        /*
+         * We get vendor_id from the vendor's own products.
+         * The /products/my endpoint already returns vendor_id.
+         */
+        if (productsLoading) {
+          return;
+        }
+
+        if (products.length === 0) {
+          setReviews([]);
+          setReviewStatistics(null);
+          setReviewsLoading(false);
+          return;
+        }
+
+        const vendorId = products[0]?.vendor_id;
+
+        if (!vendorId) {
+          setReviewError("Vendor ID could not be determined.");
+          setReviewsLoading(false);
+          return;
+        }
+
+        console.log("DASHBOARD VENDOR ID:", vendorId);
+
+        const reviewsUrl = `${API_URL}/api/reviews?vendor_id=${vendorId}`;
+        const statisticsUrl = `${API_URL}/api/reviews/statistics?vendor_id=${vendorId}`;
+
+        const [reviewsResponse, statisticsResponse] = await Promise.all([
+          fetch(reviewsUrl, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          fetch(statisticsUrl, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        ]);
+
+        const reviewsData = await reviewsResponse.json().catch(() => null);
+        const statisticsData = await statisticsResponse
+          .json()
+          .catch(() => null);
+
+        console.log(
+          "DASHBOARD REVIEWS STATUS:",
+          reviewsResponse.status
+        );
+        console.log("DASHBOARD REVIEWS:", reviewsData);
+
+        console.log(
+          "DASHBOARD REVIEW STATISTICS STATUS:",
+          statisticsResponse.status
+        );
+        console.log(
+          "DASHBOARD REVIEW STATISTICS:",
+          statisticsData
+        );
+
+        if (!reviewsResponse.ok) {
+          throw new Error(
+            typeof reviewsData?.detail === "string"
+              ? reviewsData.detail
+              : "Failed to load vendor reviews."
+          );
+        }
+
+        const reviewList = Array.isArray(reviewsData)
+          ? reviewsData
+          : Array.isArray(reviewsData?.data)
+          ? reviewsData.data
+          : [];
+
+        setReviews(reviewList);
+
+        if (statisticsResponse.ok) {
+          const stats =
+            statisticsData?.data ?? statisticsData ?? null;
+
+          setReviewStatistics(stats);
+        } else {
+          setReviewStatistics(null);
+        }
+      } catch (error) {
+        console.error("FETCH REVIEWS ERROR:", error);
+
+        setReviewError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load vendor reviews."
+        );
+
+        setReviews([]);
+        setReviewStatistics(null);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [API_URL, products, productsLoading]);
+
+  // =========================================================
   // PRODUCT STATS
   // =========================================================
 
@@ -226,9 +397,74 @@ export default function VendorDashboardPage() {
     (product) => !product.is_hidden
   );
 
-  const featuredProducts = products.filter(
-    (product) => product.is_featured
+  // =========================================================
+  // REVIEW STATISTICS
+  // =========================================================
+
+  const getReviewRating = (review: Review): number | null => {
+    const rating =
+      review.overall_rating ??
+      review.rating_overall ??
+      review.ratings?.overall_rating ??
+      null;
+
+    if (rating === null || rating === undefined) {
+      return null;
+    }
+
+    const numericRating = Number(rating);
+
+    if (Number.isNaN(numericRating)) {
+      return null;
+    }
+
+    return numericRating;
+  };
+
+  const calculatedAverageRating = (() => {
+    const ratings = reviews
+      .map(getReviewRating)
+      .filter(
+        (rating): rating is number =>
+          rating !== null && rating > 0
+      );
+
+    if (ratings.length === 0) {
+      return 0;
+    }
+
+    const total = ratings.reduce(
+      (sum, rating) => sum + rating,
+      0
+    );
+
+    return total / ratings.length;
+  })();
+
+  const statisticsAverageRating = Number(
+    reviewStatistics?.average_rating ??
+      reviewStatistics?.avg_rating ??
+      reviewStatistics?.overall_rating ??
+      reviewStatistics?.rating ??
+      0
   );
+
+  const averageRating =
+    statisticsAverageRating > 0
+      ? statisticsAverageRating
+      : calculatedAverageRating;
+
+  const statisticsReviewCount = Number(
+    reviewStatistics?.total_reviews ??
+      reviewStatistics?.review_count ??
+      reviewStatistics?.count ??
+      0
+  );
+
+  const totalReviews =
+    statisticsReviewCount > 0
+      ? statisticsReviewCount
+      : reviews.length;
 
   // =========================================================
   // REVENUE CHART
@@ -240,13 +476,11 @@ export default function VendorDashboardPage() {
 
   return (
     <div className="space-y-6">
-
       {/* =====================================================
           PAGE HEADER
       ===================================================== */}
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-
         <div>
           <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">
             Vendor Portal
@@ -262,7 +496,6 @@ export default function VendorDashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
-
           <Link href="/vendor/products">
             <Button variant="outline" size="sm">
               <Package className="h-4 w-4" />
@@ -276,9 +509,7 @@ export default function VendorDashboardPage() {
               Add Product
             </Button>
           </Link>
-
         </div>
-
       </div>
 
       {/* =====================================================
@@ -286,15 +517,11 @@ export default function VendorDashboardPage() {
       ===================================================== */}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-
         {/* PRODUCTS */}
 
         <Card className="relative overflow-hidden">
-
           <div className="flex items-start justify-between">
-
             <div>
-
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
                 Total Products
               </p>
@@ -304,33 +531,25 @@ export default function VendorDashboardPage() {
               </h3>
 
               <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-emerald-600">
-
                 <TrendingUp className="h-3.5 w-3.5" />
 
                 {productsLoading
                   ? "Loading..."
                   : `${visibleProducts.length} visible`}
-
               </div>
-
             </div>
 
             <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
               <Package className="h-5 w-5" />
             </div>
-
           </div>
-
         </Card>
 
         {/* RFQs */}
 
         <Card className="relative overflow-hidden">
-
           <div className="flex items-start justify-between">
-
             <div>
-
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
                 Incoming RFQs
               </p>
@@ -343,25 +562,19 @@ export default function VendorDashboardPage() {
                 <Clock className="h-3.5 w-3.5" />
                 4 need response
               </div>
-
             </div>
 
             <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
               <ClipboardList className="h-5 w-5" />
             </div>
-
           </div>
-
         </Card>
 
         {/* PENDING QUOTATIONS */}
 
         <Card className="relative overflow-hidden">
-
           <div className="flex items-start justify-between">
-
             <div>
-
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
                 Pending Quotations
               </p>
@@ -374,25 +587,19 @@ export default function VendorDashboardPage() {
                 <Clock className="h-3.5 w-3.5" />
                 Need response
               </div>
-
             </div>
 
             <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
               <FileText className="h-5 w-5" />
             </div>
-
           </div>
-
         </Card>
 
         {/* ORDERS */}
 
         <Card className="relative overflow-hidden">
-
           <div className="flex items-start justify-between">
-
             <div>
-
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
                 Active Orders
               </p>
@@ -406,17 +613,13 @@ export default function VendorDashboardPage() {
                 <ShoppingBag className="h-3.5 w-3.5" />
                 {orderStatistics.shipping} shipping
               </div>
-
             </div>
 
             <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
               <ShoppingBag className="h-5 w-5" />
             </div>
-
           </div>
-
         </Card>
-
       </div>
 
       {/* =====================================================
@@ -424,11 +627,9 @@ export default function VendorDashboardPage() {
       ===================================================== */}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
         {/* INCOMING RFQS */}
 
         <div className="xl:col-span-2">
-
           <Card
             title="Incoming RFQs"
             subtitle="Recent sourcing requests from buyers"
@@ -443,9 +644,7 @@ export default function VendorDashboardPage() {
               </Link>
             }
           >
-
             <div className="space-y-3">
-
               <RFQRow
                 product="Industrial Steel Sheets"
                 rfq="RFQ-9021"
@@ -477,11 +676,8 @@ export default function VendorDashboardPage() {
                 statusType="urgent"
                 submit
               />
-
             </div>
-
           </Card>
-
         </div>
 
         {/* BUSINESS OVERVIEW */}
@@ -490,15 +686,10 @@ export default function VendorDashboardPage() {
           title="Business Overview"
           subtitle="Your vendor performance"
         >
-
           <div className="space-y-5">
-
             <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-100">
-
               <div className="flex items-center justify-between">
-
                 <div>
-
                   <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">
                     Monthly Revenue
                   </p>
@@ -506,20 +697,17 @@ export default function VendorDashboardPage() {
                   <h3 className="text-xl font-black text-slate-900 mt-1">
                     $48,250
                   </h3>
-
                 </div>
 
                 <div className="p-2.5 bg-white rounded-xl text-indigo-600">
                   <DollarSign className="h-5 w-5" />
                 </div>
-
               </div>
 
               <div className="flex items-center gap-1 mt-2 text-xs font-bold text-emerald-600">
                 <TrendingUp className="h-3.5 w-3.5" />
                 14.5% from last month
               </div>
-
             </div>
 
             <OverviewRow
@@ -540,14 +728,28 @@ export default function VendorDashboardPage() {
             <OverviewRow
               icon={<StarIcon />}
               title="Vendor Rating"
-              description="Based on buyer reviews"
-              value="4.8 / 5"
+              description={
+                reviewsLoading
+                  ? "Loading buyer reviews..."
+                  : `${totalReviews} buyer ${
+                      totalReviews === 1 ? "review" : "reviews"
+                    }`
+              }
+              value={
+                reviewsLoading
+                  ? "..."
+                  : averageRating > 0
+                  ? `${averageRating.toFixed(1)} / 5`
+                  : "No rating"
+              }
+              valueClass={
+                averageRating > 0
+                  ? "text-amber-600"
+                  : "text-slate-400"
+              }
             />
-
           </div>
-
         </Card>
-
       </div>
 
       {/* =====================================================
@@ -567,15 +769,11 @@ export default function VendorDashboardPage() {
           </Link>
         }
       >
-
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
           {/* REVENUE SUMMARY */}
 
           <div className="xl:col-span-1">
-
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 h-full">
-
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
                 Total Sales
               </p>
@@ -590,9 +788,7 @@ export default function VendorDashboardPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 mt-6">
-
                 <div className="p-3 rounded-xl bg-white border border-slate-200">
-
                   <p className="text-[10px] font-bold text-slate-400">
                     Orders
                   </p>
@@ -600,11 +796,9 @@ export default function VendorDashboardPage() {
                   <p className="text-lg font-black text-slate-900 mt-1">
                     {orderStatistics.total}
                   </p>
-
                 </div>
 
                 <div className="p-3 rounded-xl bg-white border border-slate-200">
-
                   <p className="text-[10px] font-bold text-slate-400">
                     Avg. Order
                   </p>
@@ -612,25 +806,17 @@ export default function VendorDashboardPage() {
                   <p className="text-lg font-black text-slate-900 mt-1">
                     $9.3K
                   </p>
-
                 </div>
-
               </div>
-
             </div>
-
           </div>
 
           {/* MONTHLY REVENUE CHART */}
 
           <div className="xl:col-span-2">
-
             <div className="h-full min-h-[260px] p-4 rounded-2xl border border-slate-200">
-
               <div className="flex items-center justify-between mb-5">
-
                 <div>
-
                   <p className="text-sm font-extrabold text-slate-900">
                     Monthly Revenue
                   </p>
@@ -638,17 +824,13 @@ export default function VendorDashboardPage() {
                   <p className="text-[10px] text-slate-400 font-medium mt-1">
                     Revenue generated from completed orders
                   </p>
-
                 </div>
 
                 <BarChart3 className="h-5 w-5 text-indigo-500" />
-
               </div>
 
               <div className="flex items-end justify-between gap-3 h-[175px]">
-
                 {monthlyRevenue.map((item) => {
-
                   const height =
                     (item.revenue / maxRevenue) * 100;
 
@@ -657,40 +839,29 @@ export default function VendorDashboardPage() {
                       key={item.month}
                       className="flex-1 h-full flex flex-col items-center justify-end gap-2"
                     >
-
                       <div className="relative w-full max-w-[48px] h-full flex items-end">
-
                         <div
                           className="w-full rounded-t-lg bg-indigo-500 hover:bg-indigo-600 transition-all group relative"
                           style={{
                             height: `${height}%`,
                           }}
                         >
-
                           <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap px-2 py-1 rounded-md bg-slate-900 text-white text-[9px] font-bold">
                             ${item.revenue.toLocaleString()}
                           </div>
-
                         </div>
-
                       </div>
 
                       <span className="text-[10px] font-bold text-slate-400">
                         {item.month}
                       </span>
-
                     </div>
                   );
                 })}
-
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </Card>
 
       {/* =====================================================
@@ -710,9 +881,7 @@ export default function VendorDashboardPage() {
           </Link>
         }
       >
-
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-
           <OrderStat
             label="Total Orders"
             value={orderStatistics.total}
@@ -746,9 +915,7 @@ export default function VendorDashboardPage() {
             icon={<XCircle className="h-4 w-4" />}
             color="rose"
           />
-
         </div>
-
       </Card>
 
       {/* =====================================================
@@ -756,7 +923,6 @@ export default function VendorDashboardPage() {
       ===================================================== */}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-
         {/* PRODUCTS */}
 
         <Card
@@ -771,27 +937,20 @@ export default function VendorDashboardPage() {
             </Link>
           }
         >
-
           {productError && (
             <div className="p-3 mb-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-700">
-              <p className="text-xs font-bold">
-                {productError}
-              </p>
+              <p className="text-xs font-bold">{productError}</p>
             </div>
           )}
 
           {productsLoading ? (
-
             <div className="py-8 text-center">
               <p className="text-xs font-semibold text-slate-400">
                 Loading products...
               </p>
             </div>
-
           ) : products.length === 0 ? (
-
             <div className="py-8 text-center">
-
               <Package className="h-8 w-8 mx-auto text-slate-300 mb-2" />
 
               <p className="text-xs font-bold text-slate-600">
@@ -809,26 +968,17 @@ export default function VendorDashboardPage() {
                 <Plus className="h-3.5 w-3.5" />
                 Add Product
               </Link>
-
             </div>
-
           ) : (
-
             <div className="space-y-3">
-
               {products.slice(0, 5).map((product) => (
-
                 <ProductRow
                   key={product.id}
                   product={product}
                 />
-
               ))}
-
             </div>
-
           )}
-
         </Card>
 
         {/* ORDERS */}
@@ -845,9 +995,7 @@ export default function VendorDashboardPage() {
             </Link>
           }
         >
-
           <div className="space-y-3">
-
             <OrderRow
               id="ORD-8392"
               buyer="Global Manufacturing Ltd."
@@ -871,19 +1019,76 @@ export default function VendorDashboardPage() {
               status="Delivered"
               statusType="delivered"
             />
-
           </div>
-
         </Card>
-
       </div>
+
+      {/* =====================================================
+          RECENT REVIEWS
+      ===================================================== */}
+
+      <Card
+        title="Recent Buyer Reviews"
+        subtitle="Latest feedback from buyers"
+        badge={
+          reviewsLoading
+            ? "Loading..."
+            : `${totalReviews} ${
+                totalReviews === 1 ? "Review" : "Reviews"
+              }`
+        }
+        headerAction={
+          <Link
+            href="/vendor/reviews"
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+          >
+            View All
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        }
+      >
+        {reviewError && (
+          <div className="p-3 mb-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-700">
+            <p className="text-xs font-bold">{reviewError}</p>
+          </div>
+        )}
+
+        {reviewsLoading ? (
+          <div className="py-8 text-center">
+            <p className="text-xs font-semibold text-slate-400">
+              Loading reviews...
+            </p>
+          </div>
+        ) : reviews.length === 0 ? (
+          <div className="py-8 text-center">
+            <StarIcon />
+
+            <p className="text-xs font-bold text-slate-600 mt-2">
+              No reviews yet
+            </p>
+
+            <p className="text-[10px] text-slate-400 mt-1">
+              Buyer reviews will appear here once customers rate your products.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {reviews.slice(0, 3).map((review) => (
+              <ReviewRow
+                key={review.id}
+                review={review}
+                getRating={getReviewRating}
+              />
+            ))}
+          </div>
+        )}
+      </Card>
 
       {/* =====================================================
           PENDING QUOTATIONS + RECENT ACTIVITIES
       ===================================================== */}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-
         {/* PENDING QUOTATIONS */}
 
         <Card
@@ -900,22 +1105,15 @@ export default function VendorDashboardPage() {
             </Link>
           }
         >
-
           <div className="space-y-3">
-
             {pendingQuotations.map((quotation) => (
-
               <div
                 key={quotation.id}
                 className="p-4 rounded-xl border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/20 transition-all"
               >
-
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-
                   <div className="min-w-0">
-
                     <div className="flex items-center gap-2">
-
                       <h4 className="text-xs font-extrabold text-slate-900 truncate">
                         {quotation.product}
                       </h4>
@@ -924,7 +1122,6 @@ export default function VendorDashboardPage() {
                         status={quotation.status}
                         type={quotation.statusType}
                       />
-
                     </div>
 
                     <p className="text-[10px] text-slate-400 font-medium mt-1">
@@ -938,26 +1135,18 @@ export default function VendorDashboardPage() {
                     <p className="text-[10px] text-slate-500 font-semibold mt-1">
                       Required by {quotation.deadline}
                     </p>
-
                   </div>
 
                   <Link href="/vendor/rfqs">
-
                     <Button variant="outline" size="sm">
                       <Eye className="h-3.5 w-3.5" />
                       Review
                     </Button>
-
                   </Link>
-
                 </div>
-
               </div>
-
             ))}
-
           </div>
-
         </Card>
 
         {/* RECENT ACTIVITIES */}
@@ -966,22 +1155,15 @@ export default function VendorDashboardPage() {
           title="Recent Activities"
           subtitle="Latest activity on your vendor account"
         >
-
           <div className="space-y-4">
-
             {recentActivities.map((activity) => (
-
               <ActivityRow
                 key={activity.id}
                 activity={activity}
               />
-
             ))}
-
           </div>
-
         </Card>
-
       </div>
 
       {/* =====================================================
@@ -992,9 +1174,7 @@ export default function VendorDashboardPage() {
         title="Quick Actions"
         subtitle="Frequently used vendor tools"
       >
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-
           <QuickAction
             href="/vendor/products/new"
             icon={<Plus className="h-4 w-4" />}
@@ -1022,15 +1202,11 @@ export default function VendorDashboardPage() {
             title="Track Orders"
             description="Manage active orders"
           />
-
         </div>
-
       </Card>
-
     </div>
   );
 }
-
 
 /*
  * =========================================================
@@ -1057,7 +1233,6 @@ function RFQRow({
   statusType: "new" | "reviewing" | "urgent";
   submit?: boolean;
 }) {
-
   const statusStyles = {
     new: "bg-amber-50 text-amber-700 border-amber-100",
     reviewing: "bg-indigo-50 text-indigo-700 border-indigo-100",
@@ -1066,17 +1241,13 @@ function RFQRow({
 
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all">
-
       <div className="flex items-start gap-3">
-
         <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 shrink-0">
           <ClipboardList className="h-4 w-4" />
         </div>
 
         <div>
-
           <div className="flex items-center gap-2">
-
             <h4 className="text-xs font-extrabold text-slate-900">
               {product}
             </h4>
@@ -1086,7 +1257,6 @@ function RFQRow({
             >
               {status}
             </span>
-
           </div>
 
           <p className="text-[11px] text-slate-400 font-medium mt-1">
@@ -1096,38 +1266,28 @@ function RFQRow({
           <p className="text-[11px] text-slate-500 font-semibold mt-1">
             Required by {deadline}
           </p>
-
         </div>
-
       </div>
 
       <div className="flex items-center gap-2">
-
         <Link href="/vendor/rfqs">
-
           <Button variant="outline" size="sm">
             <Eye className="h-3.5 w-3.5" />
             View
           </Button>
-
         </Link>
 
         {submit && (
           <Link href="/vendor/rfqs">
-
             <Button variant="primary" size="sm">
               Submit Quote
             </Button>
-
           </Link>
         )}
-
       </div>
-
     </div>
   );
 }
-
 
 /*
  * =========================================================
@@ -1148,18 +1308,14 @@ function OverviewRow({
   value: string;
   valueClass?: string;
 }) {
-
   return (
     <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200">
-
       <div className="flex items-center gap-3">
-
         <div className="p-2 rounded-lg bg-slate-100 text-slate-600">
           {icon}
         </div>
 
         <div>
-
           <p className="text-xs font-bold text-slate-900">
             {title}
           </p>
@@ -1167,19 +1323,15 @@ function OverviewRow({
           <p className="text-[10px] text-slate-400 font-medium">
             {description}
           </p>
-
         </div>
-
       </div>
 
       <span className={`text-sm font-black ${valueClass}`}>
         {value}
       </span>
-
     </div>
   );
 }
-
 
 /*
  * =========================================================
@@ -1198,7 +1350,6 @@ function OrderStat({
   icon: React.ReactNode;
   color?: "slate" | "amber" | "indigo" | "emerald" | "rose";
 }) {
-
   const styles = {
     slate: "bg-slate-50 text-slate-600 border-slate-200",
     amber: "bg-amber-50 text-amber-700 border-amber-100",
@@ -1211,13 +1362,10 @@ function OrderStat({
     <div
       className={`p-4 rounded-xl border ${styles[color]}`}
     >
-
       <div className="flex items-center justify-between">
-
         <div className="p-2 rounded-lg bg-white/80">
           {icon}
         </div>
-
       </div>
 
       <p className="text-2xl font-black text-slate-900 mt-3">
@@ -1227,11 +1375,9 @@ function OrderStat({
       <p className="text-[10px] font-bold uppercase tracking-wide mt-1">
         {label}
       </p>
-
     </div>
   );
 }
-
 
 /*
  * =========================================================
@@ -1244,9 +1390,8 @@ function QuotationStatus({
   type,
 }: {
   status: string;
-  type: string;
+  type: "new" | "reviewing" | "urgent";
 }) {
-
   const styles: Record<string, string> = {
     new: "bg-amber-50 text-amber-700 border-amber-100",
     reviewing: "bg-indigo-50 text-indigo-700 border-indigo-100",
@@ -1264,7 +1409,6 @@ function QuotationStatus({
   );
 }
 
-
 /*
  * =========================================================
  * ACTIVITY ROW
@@ -1276,7 +1420,6 @@ function ActivityRow({
 }: {
   activity: ActivityItem;
 }) {
-
   const activityIcons = {
     order: <ShoppingBag className="h-4 w-4" />,
     quote: <FileText className="h-4 w-4" />,
@@ -1286,15 +1429,12 @@ function ActivityRow({
 
   return (
     <div className="flex items-start gap-3">
-
       <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
         {activityIcons[activity.type]}
       </div>
 
       <div className="min-w-0 flex-1">
-
         <div className="flex items-center justify-between gap-3">
-
           <p className="text-xs font-bold text-slate-900">
             {activity.title}
           </p>
@@ -1302,19 +1442,15 @@ function ActivityRow({
           <span className="text-[9px] font-medium text-slate-400 whitespace-nowrap">
             {activity.time}
           </span>
-
         </div>
 
         <p className="text-[10px] text-slate-400 font-medium mt-1">
           {activity.description}
         </p>
-
       </div>
-
     </div>
   );
 }
-
 
 /*
  * =========================================================
@@ -1327,20 +1463,15 @@ function ProductRow({
 }: {
   product: Product;
 }) {
-
   return (
     <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
-
       <div className="flex items-center gap-3 min-w-0">
-
         <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
           <Package className="h-4 w-4" />
         </div>
 
         <div className="min-w-0">
-
           <div className="flex items-center gap-2">
-
             <p className="text-xs font-bold text-slate-900 truncate">
               {product.name}
             </p>
@@ -1350,38 +1481,29 @@ function ProductRow({
                 Featured
               </span>
             )}
-
           </div>
 
           <p className="text-[10px] text-slate-400 font-medium mt-0.5">
             {product.category}
           </p>
-
         </div>
-
       </div>
 
       <div className="text-right shrink-0">
-
         <p className="text-xs font-bold text-slate-700">
           {product.stock_available ?? 0} units
         </p>
 
         <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-
           {product.price_min != null &&
           product.price_max != null
             ? `$${product.price_min} - $${product.price_max}`
             : "Price not set"}
-
         </p>
-
       </div>
-
     </div>
   );
 }
-
 
 /*
  * =========================================================
@@ -1402,7 +1524,6 @@ function OrderRow({
   status: string;
   statusType: "processing" | "shipped" | "delivered";
 }) {
-
   const statusStyles = {
     processing:
       "bg-amber-50 text-amber-700 border-amber-100",
@@ -1416,15 +1537,12 @@ function OrderRow({
 
   return (
     <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
-
       <div className="flex items-center gap-3 min-w-0">
-
         <div className="p-2 rounded-lg bg-slate-100 text-slate-600 shrink-0">
           <ShoppingBag className="h-4 w-4" />
         </div>
 
         <div className="min-w-0">
-
           <p className="text-xs font-bold text-slate-900">
             {id}
           </p>
@@ -1432,13 +1550,10 @@ function OrderRow({
           <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
             {buyer}
           </p>
-
         </div>
-
       </div>
 
       <div className="text-right shrink-0">
-
         <p className="text-xs font-black text-slate-900">
           {amount}
         </p>
@@ -1448,13 +1563,74 @@ function OrderRow({
         >
           {status}
         </span>
-
       </div>
-
     </div>
   );
 }
 
+/*
+ * =========================================================
+ * REVIEW ROW
+ * =========================================================
+ */
+
+function ReviewRow({
+  review,
+  getRating,
+}: {
+  review: Review;
+  getRating: (review: Review) => number | null;
+}) {
+  const rating = getRating(review);
+
+  const buyerName =
+    review.buyer_name ||
+    (review.buyer_id
+      ? `Buyer #${review.buyer_id}`
+      : "Anonymous Buyer");
+
+  const formattedDate = review.created_at
+    ? new Date(review.created_at).toLocaleDateString()
+    : "";
+
+  return (
+    <div className="p-4 rounded-xl border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/20 transition-all">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-extrabold text-slate-900">
+            {buyerName}
+          </p>
+
+          {formattedDate && (
+            <p className="text-[9px] text-slate-400 font-medium mt-0.5">
+              {formattedDate}
+            </p>
+          )}
+        </div>
+
+        {rating !== null && (
+          <div className="flex items-center gap-1 shrink-0">
+            <StarIcon />
+
+            <span className="text-xs font-black text-amber-600">
+              {rating.toFixed(1)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {review.comment ? (
+        <p className="text-[11px] text-slate-600 font-medium leading-relaxed mt-3">
+          {review.comment}
+        </p>
+      ) : (
+        <p className="text-[10px] text-slate-400 font-medium mt-3">
+          No written comment provided.
+        </p>
+      )}
+    </div>
+  );
+}
 
 /*
  * =========================================================
@@ -1473,19 +1649,16 @@ function QuickAction({
   title: string;
   description: string;
 }) {
-
   return (
     <Link
       href={href}
       className="group flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition-all"
     >
-
       <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 transition-colors">
         {icon}
       </div>
 
       <div>
-
         <p className="text-xs font-extrabold text-slate-900">
           {title}
         </p>
@@ -1493,15 +1666,12 @@ function QuickAction({
         <p className="text-[10px] text-slate-400 font-medium mt-0.5">
           {description}
         </p>
-
       </div>
 
       <ArrowUpRight className="h-3.5 w-3.5 text-slate-300 ml-auto group-hover:text-indigo-500 transition-colors" />
-
     </Link>
   );
 }
-
 
 /*
  * =========================================================
@@ -1510,10 +1680,9 @@ function QuickAction({
  */
 
 function StarIcon() {
-
   return (
     <svg
-      className="h-4 w-4"
+      className="h-4 w-4 text-amber-400"
       viewBox="0 0 24 24"
       fill="currentColor"
     >
