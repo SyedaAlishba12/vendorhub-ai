@@ -12,14 +12,31 @@ const apiClient = axios.create({
   timeout: 20000,
 });
 
-// Add authentication token to every request
+// ---------------------------------------
+// Add authentication token to requests
+// ---------------------------------------
+
 apiClient.interceptors.request.use(
   (config) => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("vendorhub_token");
+    if (
+      typeof window !== "undefined"
+    ) {
+      const localToken =
+        localStorage.getItem(
+          "vendorhub_token"
+        );
+
+      const sessionToken =
+        sessionStorage.getItem(
+          "vendorhub_token"
+        );
+
+      const token =
+        localToken || sessionToken;
 
       if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        config.headers.Authorization =
+          `Bearer ${token}`;
       }
     }
 

@@ -126,7 +126,11 @@ class RFQ(Base):
         back_populates="rfq",
         cascade="all, delete-orphan"
     )
-
+    vendor_assignments = relationship(
+    "RFQVendor",
+    back_populates="rfq",
+    cascade="all, delete-orphan"
+    ) 
 
 class RFQAttachment(Base):
     __tablename__ = "rfq_attachments"

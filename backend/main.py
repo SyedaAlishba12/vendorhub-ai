@@ -24,6 +24,7 @@ from models.category import ProductCategory, CertificationType
 from models.Document import DocumentDB
 from models.PricingPlan import PricingPlan
 from models.Subscription import Subscription
+from models.RFQVendor import RFQVendor
 
 # ============================================================
 # EXISTING / AI / COMMUNICATION ROUTES
@@ -52,6 +53,8 @@ from routes.pricingRoutes import router as pricing_router
 from routes.adminPlanRoutes import router as admin_plan_router
 from routes.paymentRoutes import router as payment_router
 from routes.mapsRoutes import router as maps_router
+from routes.vendorRFQRoutes import router as vendor_rfq_router
+
 
 
 # ============================================================
@@ -65,7 +68,6 @@ from routes import (
     category_routes,
     auth_routes,
 )
-
 
 # ============================================================
 # APP
@@ -142,6 +144,12 @@ app.include_router(product_routes.router)
 app.include_router(quote_routes.router)
 app.include_router(category_routes.router)
 app.include_router(category_routes.cert_router)
+# ------------------------------------------------------------
+# Vendor Dashboard
+# ------------------------------------------------------------
+
+app.include_router(vendor_rfq_router)
+
 
 
 # ------------------------------------------------------------

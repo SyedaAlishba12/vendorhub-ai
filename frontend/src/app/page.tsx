@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import apiClient from '../utils/api/apiClient';
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 import StatCard from '../components/dashboard/StatCard';
 import ActiveRFQsWidget from '../components/dashboard/ActiveRFQsWidget';
@@ -125,6 +126,14 @@ interface StatisticsData {
 }
 
 export default function DashboardPage() {
+  return (
+    <ProtectedRoute allowedRoles={["buyer"]}>
+      <DashboardContent />
+    </ProtectedRoute>
+  );
+}
+
+function DashboardContent() {
   const [data, setData] = useState<DashboardData | null>(null);
 
   const [statistics, setStatistics] =
@@ -449,6 +458,9 @@ export default function DashboardPage() {
 
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
+
+
+            
 
             <ActiveRFQsWidget
               rfqs={data.active_rfqs}

@@ -1,4 +1,3 @@
-import io
 import re
 import uuid
 import asyncio
@@ -6,6 +5,7 @@ import json
 import os
 
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, Response
 from datetime import datetime, timedelta
@@ -15,6 +15,9 @@ from models.RFQ import RFQ, RFQStatus
 from models.Buyer import Buyer
 from schemas.rfqSchemas import RFQCreate, RFQUpdate
 from services.pdfService import PDFService
+
+from models.RFQVendor import RFQVendor
+from models.vendors import Vendor
 
 
 class RFQService:
@@ -27,7 +30,9 @@ class RFQService:
     ) -> RFQ:
 
         result = await db.execute(
-            select(Buyer).where(Buyer.user_id == user_id)
+            select(Buyer).where(
+                Buyer.user_id == user_id
+            )
         )
 
         buyer = result.scalar_one_or_none()
@@ -42,14 +47,10 @@ class RFQService:
 
         data = rfq_data.dict()
 
-        # Normalize delivery_date for PostgreSQL
-        # Your model uses DateTime without timezone.
         if data.get("delivery_date") is not None:
 
             delivery_date = data["delivery_date"]
 
-            # If Pydantic gives us a timezone-aware datetime,
-            # remove the timezone information before saving.
             if isinstance(delivery_date, datetime):
 
                 if delivery_date.tzinfo is not None:
@@ -57,7 +58,6 @@ class RFQService:
                         tzinfo=None
                     )
 
-            # Handle ISO date strings as well
             elif isinstance(delivery_date, str):
 
                 try:
@@ -99,7 +99,9 @@ class RFQService:
     ) -> list[RFQ]:
 
         result = await db.execute(
-            select(Buyer).where(Buyer.user_id == user_id)
+            select(Buyer).where(
+                Buyer.user_id == user_id
+            )
         )
 
         buyer = result.scalar_one_or_none()
@@ -112,12 +114,18 @@ class RFQService:
 
         query = (
             select(RFQ)
-            .where(RFQ.buyer_id == buyer.id)
-            .order_by(RFQ.created_at.desc())
+            .where(
+                RFQ.buyer_id == buyer.id
+            )
+            .order_by(
+                RFQ.created_at.desc()
+            )
         )
 
         if status:
-            query = query.where(RFQ.status == status)
+            query = query.where(
+                RFQ.status == status
+            )
 
         result = await db.execute(query)
 
@@ -131,7 +139,9 @@ class RFQService:
     ) -> RFQ:
 
         result = await db.execute(
-            select(Buyer).where(Buyer.user_id == user_id)
+            select(Buyer).where(
+                Buyer.user_id == user_id
+            )
         )
 
         buyer = result.scalar_one_or_none()
@@ -179,25 +189,35 @@ class RFQService:
                 detail="Only draft RFQs can be edited"
             )
 
-        data = rfq_data.dict(exclude_unset=True)
+        data = rfq_data.dict(
+            exclude_unset=True
+        )
 
-        # Normalize delivery_date before updating
         if data.get("delivery_date") is not None:
 
             delivery_date = data["delivery_date"]
 
-            if isinstance(delivery_date, datetime):
+            if isinstance(
+                delivery_date,
+                datetime
+            ):
 
                 if delivery_date.tzinfo is not None:
                     data["delivery_date"] = delivery_date.replace(
                         tzinfo=None
                     )
 
-            elif isinstance(delivery_date, str):
+            elif isinstance(
+                delivery_date,
+                str
+            ):
 
                 try:
                     parsed_date = datetime.fromisoformat(
-                        delivery_date.replace("Z", "+00:00")
+                        delivery_date.replace(
+                            "Z",
+                            "+00:00"
+                        )
                     )
 
                     if parsed_date.tzinfo is not None:
@@ -214,7 +234,11 @@ class RFQService:
                     )
 
         for key, value in data.items():
-            setattr(rfq, key, value)
+            setattr(
+                rfq,
+                key,
+                value
+            )
 
         rfq.updated_at = datetime.utcnow()
 
@@ -243,35 +267,208 @@ class RFQService:
             "message": "RFQ deleted successfully"
         }
 
+    # =========================================================
+    # SEND RFQ TO VENDOR
+    # =========================================================
+
     @staticmethod
     async def send_rfq(
         db: AsyncSession,
         user_id: int,
-        rfq_id: int
+        rfq_id: int,
+        vendor_id: int
     ):
 
-        rfq = await RFQService.get_rfq_by_id(
-            db,
-            user_id,
-            rfq_id
+        # Find buyer associated with logged-in user
+        buyer_result = await db.execute(
+            select(Buyer).where(
+                Buyer.user_id == user_id
+            )
         )
 
-        if rfq.status != RFQStatus.DRAFT:
+        buyer = buyer_result.scalar_one_or_none()
+
+        if not buyer:
             raise HTTPException(
-                status_code=400,
-                detail="Only draft RFQs can be sent"
+                status_code=404,
+                detail="Buyer not found"
             )
 
+        # Find RFQ belonging to this buyer
+        rfq_result = await db.execute(
+            select(RFQ).where(
+                RFQ.id == rfq_id,
+                RFQ.buyer_id == buyer.id
+            )
+        )
+
+        rfq = rfq_result.scalar_one_or_none()
+
+        if not rfq:
+            raise HTTPException(
+                status_code=404,
+                detail="RFQ not found or you do not have permission"
+            )
+
+        # Check vendor
+        vendor_result = await db.execute(
+            select(Vendor).where(
+                Vendor.id == vendor_id
+            )
+        )
+
+        vendor = vendor_result.scalar_one_or_none()
+
+        if not vendor:
+            raise HTTPException(
+                status_code=404,
+                detail="Vendor not found"
+            )
+
+        # Check existing assignment
+        existing_result = await db.execute(
+            select(RFQVendor).where(
+                RFQVendor.rfq_id == rfq_id,
+                RFQVendor.vendor_id == vendor_id
+            )
+        )
+
+        existing_assignment = (
+            existing_result.scalar_one_or_none()
+        )
+
+        if existing_assignment:
+            raise HTTPException(
+                status_code=400,
+                detail="RFQ has already been sent to this vendor"
+            )
+
+        # Create assignment
+        rfq_vendor = RFQVendor(
+            rfq_id=rfq_id,
+            vendor_id=vendor_id,
+            status="SENT"
+        )
+
+        db.add(rfq_vendor)
+
+        # Update RFQ
         rfq.status = RFQStatus.SENT
         rfq.sent_at = datetime.utcnow()
 
         await db.commit()
-        await db.refresh(rfq)
+
+        await db.refresh(rfq_vendor)
 
         return {
             "message": "RFQ sent successfully",
-            "rfq_ref": rfq.rfq_ref
+            "rfq_id": rfq_id,
+            "vendor_id": vendor_id,
+            "status": rfq_vendor.status
         }
+
+    # =========================================================
+    # GET RFQs ASSIGNED TO LOGGED-IN VENDOR
+    # =========================================================
+
+    @staticmethod
+    async def get_vendor_rfqs(
+        db: AsyncSession,
+        user_id: int
+    ):
+
+        # ---------------------------------------------------------
+        # 1. Find the vendor belonging to the logged-in user
+        # ---------------------------------------------------------
+
+        vendor_result = await db.execute(
+            select(Vendor).where(
+                Vendor.user_id == user_id
+            )
+        )
+
+        vendor = vendor_result.scalar_one_or_none()
+
+        print("====================================")
+        print("CURRENT USER ID:", user_id)
+        print("VENDOR FOUND:", vendor)
+        print(
+            "VENDOR ID:",
+            vendor.id if vendor else None
+        )
+        print("====================================")
+
+        if not vendor:
+            raise HTTPException(
+                status_code=404,
+                detail="Vendor not found"
+            )
+
+        # ---------------------------------------------------------
+        # 2. Get RFQ assignments for this vendor
+        #
+        # selectinload(RFQVendor.rfq) is important because
+        # AsyncSession cannot lazy-load the relationship here.
+        # ---------------------------------------------------------
+
+        result = await db.execute(
+            select(RFQVendor)
+            .options(
+                selectinload(RFQVendor.rfq)
+            )
+            .where(
+                RFQVendor.vendor_id == vendor.id
+            )
+        )
+
+        assignments = result.scalars().all()
+
+        print(
+            "ASSIGNMENTS FOUND:",
+            len(assignments)
+        )
+
+        for assignment in assignments:
+
+            print(
+                "RFQ:",
+                assignment.rfq_id,
+                "VENDOR:",
+                assignment.vendor_id,
+                "STATUS:",
+                assignment.status
+            )
+
+        # ---------------------------------------------------------
+        # 3. Return RFQ information
+        # ---------------------------------------------------------
+
+        return [
+            {
+                "assignment_id": assignment.id,
+                "rfq_id": assignment.rfq_id,
+                "rfq_ref": assignment.rfq.rfq_ref,
+                "product_name": assignment.rfq.product_name,
+                "category": assignment.rfq.category,
+                "quantity": assignment.rfq.quantity,
+                "unit": assignment.rfq.unit,
+                "material": assignment.rfq.material,
+                "budget": assignment.rfq.budget,
+                "delivery_date": assignment.rfq.delivery_date,
+                "payment_terms": assignment.rfq.payment_terms,
+                "shipping_method": assignment.rfq.shipping_method,
+                "description": assignment.rfq.description,
+                "rfq_status": assignment.rfq.status,
+                "vendor_status": assignment.status,
+                "sent_at": assignment.sent_at,
+                "responded_at": assignment.responded_at
+            }
+            for assignment in assignments
+        ]
+
+    # =========================================================
+    # EXPORT RFQ PDF
+    # =========================================================
 
     @staticmethod
     async def export_rfq_pdf(
@@ -286,6 +483,12 @@ class RFQService:
             rfq_id
         )
 
+        delivery_date = (
+            rfq.delivery_date.date()
+            if rfq.delivery_date
+            else "N/A"
+        )
+
         content = [
             f"RFQ Reference: {rfq.rfq_ref}",
             f"Product: {rfq.product_name}",
@@ -293,10 +496,7 @@ class RFQService:
             f"Quantity: {rfq.quantity} {rfq.unit}",
             f"Material: {rfq.material or 'N/A'}",
             f"Budget: ${rfq.budget or 0}",
-            (
-                f"Delivery Date: "
-                f"{rfq.delivery_date.date() if rfq.delivery_date else 'N/A'}"
-            ),
+            f"Delivery Date: {delivery_date}",
             f"Payment Terms: {rfq.payment_terms}",
             f"Shipping Method: {rfq.shipping_method}",
             f"Description: {rfq.description or ''}",
@@ -316,6 +516,10 @@ class RFQService:
             }
         )
 
+    # =========================================================
+    # AI RFQ GENERATION
+    # =========================================================
+
     @staticmethod
     async def generate_ai_rfq(
         db: AsyncSession,
@@ -324,13 +528,15 @@ class RFQService:
     ):
 
         try:
+
             from openai import AsyncOpenAI
 
-            api_key = os.getenv("OPENAI_API_KEY")
+            api_key = os.getenv(
+                "OPENAI_API_KEY"
+            )
 
-            # If OpenAI key is not configured,
-            # use the fallback extraction.
             if not api_key:
+
                 return RFQService._fallback_extract(
                     description
                 )
@@ -386,8 +592,10 @@ Return JSON ONLY, no extra text:
                 )
 
                 content = (
-                    response.choices[0]
-                    .message.content
+                    response
+                    .choices[0]
+                    .message
+                    .content
                     .strip()
                 )
 
@@ -399,12 +607,13 @@ Return JSON ONLY, no extra text:
                 f"AI RFQ error: {e}"
             )
 
-            # If OpenAI fails because of quota,
-            # timeout, invalid JSON, or any other issue,
-            # use the local fallback.
             return RFQService._fallback_extract(
                 description
             )
+
+    # =========================================================
+    # FALLBACK AI EXTRACTION
+    # =========================================================
 
     @staticmethod
     def _fallback_extract(
@@ -426,7 +635,7 @@ Return JSON ONLY, no extra text:
             ).strftime("%Y-%m-%d"),
         }
 
-        # Extract product name
+        # Product name
         match = re.search(
             r"(?:need|buy|purchase)\s+([\w\s\-]+)",
             description,
@@ -434,15 +643,17 @@ Return JSON ONLY, no extra text:
         )
 
         if match:
+
             data["product_name"] = (
                 match.group(1)
                 .strip()
                 .title()
             )
 
-        # Extract quantity and unit
+        # Quantity and unit
         match = re.search(
-            r"(\d+)\s*(pcs|kg|m|l|meters|liters|boxes|rolls|sets)",
+            r"(\d+)\s*"
+            r"(pcs|kg|m|l|meters|liters|boxes|rolls|sets)",
             description,
             re.I
         )
@@ -458,7 +669,7 @@ Return JSON ONLY, no extra text:
                 .lower()
             )
 
-        # Extract material
+        # Material
         match = re.search(
             r"(?:made of|material)\s+([\w\s\-]+)",
             description,
@@ -466,13 +677,14 @@ Return JSON ONLY, no extra text:
         )
 
         if match:
+
             data["material"] = (
                 match.group(1)
                 .strip()
                 .title()
             )
 
-        # Extract budget
+        # Budget
         match = re.search(
             r"(?:\$|usd)\s*(\d+)",
             description,
@@ -480,11 +692,12 @@ Return JSON ONLY, no extra text:
         )
 
         if match:
+
             data["budget"] = int(
                 match.group(1)
             )
 
-        # Extract category
+        # Category
         categories = [
             "apparel",
             "electronics",
@@ -506,6 +719,10 @@ Return JSON ONLY, no extra text:
 
         return data
 
+    # =========================================================
+    # UPLOAD ATTACHMENT
+    # =========================================================
+
     @staticmethod
     async def upload_attachment(
         db: AsyncSession,
@@ -514,14 +731,12 @@ Return JSON ONLY, no extra text:
         file
     ):
 
-        # Verify that this RFQ belongs to the current buyer
         rfq = await RFQService.get_rfq_by_id(
             db,
             user_id,
             rfq_id
         )
 
-        # Create uploads directory if it does not exist
         upload_dir = os.path.join(
             os.getcwd(),
             "uploads"
@@ -532,10 +747,10 @@ Return JSON ONLY, no extra text:
             exist_ok=True
         )
 
-        # Generate unique filename
         file_ext = (
             file.filename.split(".")[-1]
-            if file.filename and "." in file.filename
+            if file.filename
+            and "." in file.filename
             else ""
         )
 
@@ -559,10 +774,8 @@ Return JSON ONLY, no extra text:
             filename
         )
 
-        # Read uploaded file
         contents = await file.read()
 
-        # Save file
         with open(
             file_path,
             "wb"
@@ -570,7 +783,6 @@ Return JSON ONLY, no extra text:
 
             f.write(contents)
 
-        # Import attachment model
         from models.RFQ import RFQAttachment
 
         attachment = RFQAttachment(
@@ -587,10 +799,12 @@ Return JSON ONLY, no extra text:
         db.add(attachment)
 
         await db.commit()
-        await db.refresh(attachment)
+
+        await db.refresh(
+            attachment
+        )
 
         return {
             "message": "Attachment uploaded",
             "attachment_id": attachment.id
         }
-

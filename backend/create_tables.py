@@ -14,6 +14,7 @@ from models.SavedVendor import SavedVendor
 from models.RecentSearch import RecentSearch
 from models.PricingPlan import PricingPlan
 from models.PaymentLog import PaymentLog
+from models.RFQVendor import RFQVendor
 
 
 async def create_tables():

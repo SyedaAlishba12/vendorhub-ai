@@ -15,9 +15,7 @@ class ProductBase(BaseModel):
 
 
 class ProductCreate(ProductBase):
-    vendor_id: int
     category_id: Optional[int] = None
-
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None

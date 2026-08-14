@@ -30,3 +30,47 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+# ==========================================
+# FORGOT PASSWORD
+# ==========================================
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+# ==========================================
+# RESET PASSWORD
+# ==========================================
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+# ==========================================
+# PROFILE UPDATE
+# ==========================================
+
+class ProfileUpdateRequest(BaseModel):
+    name: str | None = None
+    email: EmailStr | None = None
+    phone: str | None = None
+
+
+# ==========================================
+# CHANGE PASSWORD
+# ==========================================
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+# ==========================================
+# ACCOUNT ACTIONS
+# ==========================================
+
+class AccountPasswordRequest(BaseModel):
+    password: str

@@ -10,6 +10,7 @@ from sqlalchemy import (
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
+
 from database.base import Base
 
 
@@ -116,8 +117,19 @@ class Vendor(Base):
         onupdate=func.now()
     )
 
+    # User ↔ Vendor relationship
+    user = relationship(
+        "User",
+        back_populates="vendor_profile"
+    )
+
     # Buyer module relationship
     saved_by_buyers = relationship(
         "SavedVendor",
         back_populates="vendor"
-    )
+    ) 
+    rfq_assignments = relationship(
+    "RFQVendor",
+    back_populates="vendor",
+    cascade="all, delete-orphan"
+)
