@@ -11,16 +11,9 @@ from services.auth import (
     hash_password,
     verify_password,
     create_access_token,
+    validate_password,
 )
 
-from services.email_verification import (
-    generate_verification_token,
-    get_verification_token_expiry,
-)
-
-from services.email_service import (
-    send_verification_email,
-)
 from services.email_verification import (
     generate_verification_token,
     get_verification_token_expiry,
@@ -33,6 +26,10 @@ from services.email_service import (
     send_password_reset_email,
 )
 
+
+# ============================================================
+# GET USER
+# ============================================================
 
 async def get_user_by_email(
     db: AsyncSession,
@@ -56,13 +53,26 @@ async def get_user_by_id(
     return result.scalars().first()
 
 
-async def signup_user(db: AsyncSession, data: UserSignup):
-    existing = await get_user_by_email(db, data.email)
+# ============================================================
+# SIGNUP
+# ============================================================
+
+async def signup_user(
+    db: AsyncSession,
+    data: UserSignup,
+):
+    existing = await get_user_by_email(
+        db,
+        data.email,
+    )
 
     if existing:
         raise ValueError(
             "An account with this email already exists."
         )
+
+    # Validate password
+    validate_password(data.password)
 
     # Generate verification token
     verification_token = generate_verification_token()
@@ -76,7 +86,9 @@ async def signup_user(db: AsyncSession, data: UserSignup):
 
         email_verified=False,
         verification_token=verification_token,
-        verification_token_expires_at=get_verification_token_expiry(),
+        verification_token_expires_at=(
+            get_verification_token_expiry()
+        ),
     )
 
     db.add(new_user)
@@ -84,9 +96,9 @@ async def signup_user(db: AsyncSession, data: UserSignup):
     # Generate the user ID before creating the profile
     await db.flush()
 
-    # =========================================================
+    # ========================================================
     # CREATE BUYER PROFILE
-    # =========================================================
+    # ========================================================
 
     if data.role.lower() == "buyer":
 
@@ -101,9 +113,9 @@ async def signup_user(db: AsyncSession, data: UserSignup):
 
         db.add(buyer)
 
-    # =========================================================
+    # ========================================================
     # CREATE VENDOR PROFILE
-    # =========================================================
+    # ========================================================
 
     elif data.role.lower() == "vendor":
 
@@ -128,9 +140,9 @@ async def signup_user(db: AsyncSession, data: UserSignup):
 
         db.add(vendor)
 
-    # =========================================================
+    # ========================================================
     # COMMIT USER + PROFILE
-    # =========================================================
+    # ========================================================
 
     await db.commit()
 
@@ -150,11 +162,19 @@ async def signup_user(db: AsyncSession, data: UserSignup):
 
     return new_user
 
+
+# ============================================================
+# RESEND VERIFICATION EMAIL
+# ============================================================
+
 async def resend_verification_email(
     db: AsyncSession,
     email: str,
 ):
-    user = await get_user_by_email(db, email)
+    user = await get_user_by_email(
+        db,
+        email,
+    )
 
     if not user:
         raise ValueError(
@@ -166,7 +186,6 @@ async def resend_verification_email(
             "This email is already verified."
         )
 
-    # Generate a fresh token
     verification_token = generate_verification_token()
 
     user.verification_token = verification_token
@@ -176,7 +195,6 @@ async def resend_verification_email(
 
     await db.commit()
 
-    # Send new email
     await send_verification_email(
         to_email=user.email,
         verification_token=verification_token,
@@ -184,19 +202,27 @@ async def resend_verification_email(
 
     return True
 
+
+# ============================================================
+# AUTHENTICATE USER
+# ============================================================
+
 async def authenticate_user(
     db: AsyncSession,
     email: str,
     password: str,
 ):
-    user = await get_user_by_email(db, email)
+    user = await get_user_by_email(
+        db,
+        email,
+    )
 
     if not user:
         return None
 
     if not verify_password(
         password,
-        user.hashed_password
+        user.hashed_password,
     ):
         return None
 
@@ -210,6 +236,11 @@ async def authenticate_user(
 
     return user
 
+
+# ============================================================
+# BUILD JWT TOKEN
+# ============================================================
+
 def build_token_for_user(
     user: User,
 ) -> str:
@@ -221,11 +252,20 @@ def build_token_for_user(
             "role": user.role,
         }
     )
+
+
+# ============================================================
+# REQUEST PASSWORD RESET
+# ============================================================
+
 async def request_password_reset(
     db: AsyncSession,
     email: str,
 ):
-    user = await get_user_by_email(db, email)
+    user = await get_user_by_email(
+        db,
+        email,
+    )
 
     if not user:
         return True
@@ -245,11 +285,20 @@ async def request_password_reset(
     )
 
     return True
+
+
+# ============================================================
+# RESET PASSWORD
+# ============================================================
+
 async def reset_password(
     db: AsyncSession,
     token: str,
     new_password: str,
 ):
+    # Validate password
+    validate_password(new_password)
+
     result = await db.execute(
         select(User).where(
             User.password_reset_token == token
@@ -282,6 +331,8 @@ async def reset_password(
     await db.commit()
 
     return True
+
+
 # ============================================================
 # PROFILE
 # ============================================================
@@ -293,7 +344,7 @@ async def update_user_profile(
     email: str | None = None,
     phone: str | None = None,
 ):
-    # Re-fetch user in the current DB session
+    # Re-fetch user in current DB session
     result = await db.execute(
         select(User).where(User.id == user.id)
     )
@@ -301,7 +352,9 @@ async def update_user_profile(
     user = result.scalars().first()
 
     if not user:
-        raise ValueError("User not found.")
+        raise ValueError(
+            "User not found."
+        )
 
     if name is not None:
         name = name.strip()
@@ -320,7 +373,7 @@ async def update_user_profile(
 
             existing = await get_user_by_email(
                 db,
-                email
+                email,
             )
 
             if existing and existing.id != user.id:
@@ -351,6 +404,8 @@ async def update_user_profile(
     await db.refresh(user)
 
     return user
+
+
 # ============================================================
 # CHANGE PASSWORD
 # ============================================================
@@ -361,7 +416,7 @@ async def change_user_password(
     current_password: str,
     new_password: str,
 ):
-    # Re-fetch user using the current DB session
+    # Re-fetch user using current DB session
     result = await db.execute(
         select(User).where(User.id == user.id)
     )
@@ -369,7 +424,9 @@ async def change_user_password(
     user = result.scalars().first()
 
     if not user:
-        raise ValueError("User not found.")
+        raise ValueError(
+            "User not found."
+        )
 
     # Verify current password
     if not verify_password(
@@ -386,13 +443,10 @@ async def change_user_password(
             "New password must be different from your current password."
         )
 
-    # Password length validation
-    if len(new_password) < 8:
-        raise ValueError(
-            "New password must be at least 8 characters long."
-        )
+    # Minimum 8 characters
+    validate_password(new_password)
 
-    # Hash and save new password
+    # Hash using Argon2
     user.hashed_password = hash_password(
         new_password
     )
@@ -400,6 +454,8 @@ async def change_user_password(
     await db.commit()
 
     return True
+
+
 # ============================================================
 # DEACTIVATE ACCOUNT
 # ============================================================
@@ -433,7 +489,7 @@ async def delete_user(
     user: User,
     password: str,
 ):
-    # Re-fetch the user using the current DB session
+    # Re-fetch user using current DB session
     result = await db.execute(
         select(User).where(User.id == user.id)
     )

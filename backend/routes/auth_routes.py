@@ -5,6 +5,7 @@ from fastapi import (
     Depends,
     HTTPException,
 )
+
 from common.middleware.authMiddleware import get_current_user
 
 from sqlalchemy import select
@@ -27,19 +28,7 @@ from schemas.auth import (
 )
 
 from controllers import auth_controller
-from services.auth import (
-    get_user_id_from_token,
-)
 
-from services.auth import decode_access_token
-
-from services.email_verification import (
-    generate_verification_token,
-    get_verification_token_expiry,
-)
-from controllers.auth_controller import (
-    resend_verification_email,
-)
 
 router = APIRouter(
     prefix="/api/auth",
@@ -121,7 +110,9 @@ async def login(
             detail="Incorrect email or password.",
         )
 
-    token = auth_controller.build_token_for_user(user)
+    token = auth_controller.build_token_for_user(
+        user
+    )
 
     return TokenResponse(
         access_token=token,
@@ -188,7 +179,6 @@ async def verify_email(
     await db.commit()
     await db.refresh(user)
 
-    # Create JWT after successful verification
     access_token = auth_controller.build_token_for_user(
         user
     )
@@ -230,15 +220,20 @@ async def update_profile(
     except Exception as e:
         import traceback
 
-        print("========== UPDATE PROFILE ERROR ==========")
+        print(
+            "========== UPDATE PROFILE ERROR =========="
+        )
         print(str(e))
         traceback.print_exc()
-        print("==========================================")
+        print(
+            "=========================================="
+        )
 
         raise HTTPException(
             status_code=500,
-            detail=str(e),   # temporary: show actual error
+            detail=str(e),
         )
+
 
 # ============================================================
 # FORGOT PASSWORD
@@ -282,12 +277,6 @@ async def reset_password(
     data: ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    if len(data.new_password) < 8:
-        raise HTTPException(
-            status_code=400,
-            detail="Password must be at least 8 characters long.",
-        )
-
     try:
         await auth_controller.reset_password(
             db,
@@ -389,12 +378,16 @@ async def delete_account(
     except Exception as e:
         import traceback
 
-        print("========== ACCOUNT DELETE ERROR ==========")
+        print(
+            "========== ACCOUNT DELETE ERROR =========="
+        )
         print(e)
         traceback.print_exc()
-        print("==========================================")
+        print(
+            "=========================================="
+        )
 
         raise HTTPException(
-           status_code=500,
-           detail=str(e),
-    )
+            status_code=500,
+            detail=str(e),
+        )

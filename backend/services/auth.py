@@ -15,10 +15,42 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
 
+# ============================================================
+# PASSWORD HASHING
+# ============================================================
+#
+# Argon2 is used for all NEW passwords.
+#
+# bcrypt is kept only for verifying OLD passwords that were
+# already stored using bcrypt.
+#
+# This means existing users do not need to reset their
+# passwords immediately.
+# ============================================================
+
 pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
+    schemes=["argon2", "bcrypt"],
+    deprecated=["bcrypt"],
 )
+
+
+# ============================================================
+# PASSWORD VALIDATION
+# ============================================================
+
+def validate_password(password: str) -> None:
+    """
+    Validate password requirements.
+
+    Current requirement:
+    - Minimum 8 characters
+    - No maximum length restriction
+    """
+
+    if len(password) < 8:
+        raise ValueError(
+            "Password must be at least 8 characters long."
+        )
 
 
 # ============================================================
@@ -26,8 +58,13 @@ pwd_context = CryptContext(
 # ============================================================
 
 def hash_password(password: str) -> str:
-    if len(password.encode("utf-8")) > 72:
-        raise ValueError("Password must be 72 bytes or fewer.")
+    """
+    Hash a password using Argon2.
+
+    Argon2 does not have bcrypt's 72-byte password limitation.
+    """
+
+    validate_password(password)
 
     return pwd_context.hash(password)
 
@@ -36,6 +73,14 @@ def verify_password(
     plain_password: str,
     hashed_password: str,
 ) -> bool:
+    """
+    Verify a password against an existing hash.
+
+    Supports both:
+    - Argon2 hashes
+    - Existing bcrypt hashes
+    """
+
     return pwd_context.verify(
         plain_password,
         hashed_password,
