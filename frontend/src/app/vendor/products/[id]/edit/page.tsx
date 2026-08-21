@@ -33,10 +33,10 @@ interface ProductForm {
 }
 
 export default function EditProductPage() {
-  const params = useParams();
-  const router = useRouter();
+const params = useParams<{ id: string }>();
+const router = useRouter();
 
-  const productId = params.id;
+const productId = params?.id;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

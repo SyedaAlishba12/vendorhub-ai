@@ -200,7 +200,7 @@ Start directly with "Dear {vendor_name} Team," — no preamble."""
 
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3.6-flash",
             contents=prompt,
         )
         text = (response.text or "").strip()
